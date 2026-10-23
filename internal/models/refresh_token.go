@@ -88,15 +88,30 @@ func RevokeTokenFamily(tx *storage.Connection, token *RefreshToken) error {
 	var err error
 	tablename := (&pop.Model{Value: RefreshToken{}}).TableName()
 	if token.SessionId != nil {
-		err = tx.RawQuery(`update `+tablename+` set revoked = true, updated_at = now() where session_id = ? and revoked = false;`, token.SessionId).Exec()
+		if tx.IsMySQL() {
+			err = tx.RawQuery(`UPDATE `+tablename+` SET revoked = 1, updated_at = NOW() WHERE session_id = ? AND revoked = 0;`, token.SessionId).Exec()
+		} else {
+			err = tx.RawQuery(`update `+tablename+` set revoked = true, updated_at = now() where session_id = ? and revoked = false;`, token.SessionId).Exec()
+		}
 	} else {
-		err = tx.RawQuery(`
-		with recursive token_family as (
-			select id, user_id, token, revoked, parent from `+tablename+` where parent = ?
-			union
-			select r.id, r.user_id, r.token, r.revoked, r.parent from `+tablename+` r inner join token_family t on t.token = r.parent
-		)
-		update `+tablename+` r set revoked = true from token_family where token_family.id = r.id;`, token.Token).Exec()
+		if tx.IsMySQL() {
+			err = tx.RawQuery(`
+			WITH RECURSIVE token_family AS (
+				SELECT id, user_id, token, revoked, parent FROM `+tablename+` WHERE parent = ?
+				UNION
+				SELECT r.id, r.user_id, r.token, r.revoked, r.parent FROM `+tablename+` r INNER JOIN token_family t ON t.token = r.parent
+			)
+			UPDATE `+tablename+` r JOIN token_family t ON t.id = r.id SET r.revoked = 1, r.updated_at = NOW();`, token.Token).Exec()
+		} else {
+			err = tx.RawQuery(`
+			with recursive token_family as (
+				select id, user_id, token, revoked, parent from `+tablename+` where parent = ?
+				union
+				select r.id, r.user_id, r.token, r.revoked, r.parent from `+tablename+` r inner join token_family t on t.token = r.parent
+			)
+			update `+tablename+` r set revoked = true from token_family where token_family.id = r.id;`, token.Token).Exec()
+		}
+	}
 	if err != nil {
 		if IsNoRowsError(err) {
 			return nil
