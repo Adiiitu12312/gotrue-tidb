@@ -16,8 +16,6 @@ import (
 	"github.com/supabase/auth/internal/tokens"
 )
 
-const serviceTestConfig = "../../../hack/test.env"
-
 // OAuthServiceTestSuite runs tests for OAuth service layer functionality
 type OAuthServiceTestSuite struct {
 	suite.Suite
@@ -27,7 +25,7 @@ type OAuthServiceTestSuite struct {
 }
 
 func TestOAuthService(t *testing.T) {
-	globalConfig, err := confload.LoadGlobal(serviceTestConfig)
+	globalConfig, err := confload.LoadGlobal(getOAuthServerTestConfig())
 	require.NoError(t, err)
 
 	conn, err := test.SetupDBConnection(globalConfig)

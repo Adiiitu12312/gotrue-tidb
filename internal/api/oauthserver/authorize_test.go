@@ -29,7 +29,7 @@ import (
 
 func TestValidateRequestOrigin(t *testing.T) {
 	// Setup test configuration
-	globalConfig, err := confload.LoadGlobal(oauthServerTestConfig)
+	globalConfig, err := confload.LoadGlobal(getOAuthServerTestConfig())
 	require.NoError(t, err)
 
 	// Set up test site URL for validation
@@ -136,7 +136,7 @@ func TestValidateRequestOrigin(t *testing.T) {
 }
 
 func TestValidateRequestOriginEdgeCases(t *testing.T) {
-	globalConfig, err := confload.LoadGlobal(oauthServerTestConfig)
+	globalConfig, err := confload.LoadGlobal(getOAuthServerTestConfig())
 	require.NoError(t, err)
 
 	globalConfig.SiteURL = "https://example.com"
@@ -209,7 +209,7 @@ type OAuthAuthorizeTestSuite struct {
 }
 
 func TestOAuthAuthorize(t *testing.T) {
-	globalConfig, err := confload.LoadGlobal(oauthServerTestConfig)
+	globalConfig, err := confload.LoadGlobal(getOAuthServerTestConfig())
 	require.NoError(t, err)
 
 	conn, err := test.SetupDBConnection(globalConfig)

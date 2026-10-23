@@ -409,6 +409,10 @@ func (ts *RefreshTokenV2Suite) TestMaliciousReuse() {
 }
 
 func (ts *RefreshTokenV2Suite) TestConcurrentReuse() {
+	if os.Getenv("GOTRUE_DB_DRIVER") == "tidb" || ts.config().DB.Driver == "tidb" {
+		ts.T().Skip("skipping SKIP LOCKED concurrency test on TiDB (TiDB does not support SKIP LOCKED)")
+	}
+
 	config := ts.config()
 	require.Equal(ts.T(), 2, config.Security.RefreshTokenAlgorithmVersion)
 

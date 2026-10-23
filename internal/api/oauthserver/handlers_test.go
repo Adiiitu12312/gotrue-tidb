@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gofrs/uuid"
@@ -22,7 +23,15 @@ import (
 	"github.com/supabase/auth/internal/tokens"
 )
 
-const oauthServerTestConfig = "../../../hack/test.env"
+func getOAuthServerTestConfig() string {
+	driver := os.Getenv("GOTRUE_DB_DRIVER")
+	if driver == "mysql" {
+		return "../../../hack/test.mysql.env"
+	} else if driver == "tidb" {
+		return "../../../hack/test.tidb.env"
+	}
+	return "../../../hack/test.env"
+}
 
 type OAuthClientTestSuite struct {
 	suite.Suite
@@ -32,7 +41,7 @@ type OAuthClientTestSuite struct {
 }
 
 func TestOAuthClientHandler(t *testing.T) {
-	globalConfig, err := confload.LoadGlobal(oauthServerTestConfig)
+	globalConfig, err := confload.LoadGlobal(getOAuthServerTestConfig())
 	require.NoError(t, err)
 
 	conn, err := test.SetupDBConnection(globalConfig)
