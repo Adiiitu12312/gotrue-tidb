@@ -17,7 +17,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const modelsTestConfig = "../../hack/test.env"
+func getModelsTestConfig() string {
+	driver := os.Getenv("GOTRUE_DB_DRIVER")
+	if driver == "mysql" {
+		return "../../hack/test.mysql.env"
+	} else if driver == "tidb" {
+		return "../../hack/test.tidb.env"
+	}
+	return "../../hack/test.env"
+}
+
+var modelsTestConfig = getModelsTestConfig()
 
 func init() {
 	crypto.PasswordHashCost = crypto.QuickHashCost

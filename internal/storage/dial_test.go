@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -36,8 +37,18 @@ func TestGetExcludedColumns_InvalidName(t *testing.T) {
 	require.Error(t, err)
 }
 
+func getAPITestConfig() string {
+	driver := os.Getenv("GOTRUE_DB_DRIVER")
+	if driver == "mysql" {
+		return "../../hack/test.mysql.env"
+	} else if driver == "tidb" {
+		return "../../hack/test.tidb.env"
+	}
+	return "../../hack/test.env"
+}
+
 func TestTransaction(t *testing.T) {
-	apiTestConfig := "../../hack/test.env"
+	apiTestConfig := getAPITestConfig()
 	config, err := confload.LoadGlobal(apiTestConfig)
 	require.NoError(t, err)
 	conn, err := Dial(config)
@@ -51,7 +62,11 @@ func TestTransaction(t *testing.T) {
 
 	commitWithError := NewCommitWithError(errors.New("commit with error"))
 	err = conn.Transaction(func(tx *Connection) error {
-		require.NoError(t, tx.RawQuery("create table if not exists test()").Exec(), "Error saving creating test table")
+		createSQL := "create table if not exists test()"
+		if tx.IsMySQL() {
+			createSQL = "create table if not exists test(id int)"
+		}
+		require.NoError(t, tx.RawQuery(createSQL).Exec(), "Error saving creating test table")
 		return commitWithError
 	})
 	require.Error(t, err)
@@ -70,7 +85,7 @@ func TestPopConnToStd(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	apiTestConfig := "../../hack/test.env"
+	apiTestConfig := getAPITestConfig()
 	config, err := confload.LoadGlobal(apiTestConfig)
 	require.NoError(t, err)
 
@@ -477,7 +492,7 @@ func TestConnLimits(t *testing.T) {
 }
 
 func mustConfig(t *testing.T) *conf.GlobalConfiguration {
-	apiTestConfig := "../../hack/test.env"
+	apiTestConfig := getAPITestConfig()
 	config, err := confload.LoadGlobal(apiTestConfig)
 	require.NoError(t, err)
 
