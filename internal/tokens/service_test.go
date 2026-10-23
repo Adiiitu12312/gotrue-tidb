@@ -917,8 +917,35 @@ type IDTokenTestSuite struct {
 func TestIDTokenGeneration(t *testing.T) {
 	ts := &IDTokenTestSuite{}
 
+	origDBURL := os.Getenv("DATABASE_URL")
+	origDriver := os.Getenv("GOTRUE_DB_DRIVER")
+	defer func() {
+		if origDBURL != "" {
+			os.Setenv("DATABASE_URL", origDBURL)
+		}
+		if origDriver != "" {
+			os.Setenv("GOTRUE_DB_DRIVER", origDriver)
+		}
+	}()
+
+	dbConfig, err := confload.LoadGlobal(getTokensTestConfig())
+	require.NoError(t, err)
+
 	config, err := confload.LoadGlobal("../../hack/test_asymmetric.env")
 	require.NoError(t, err)
+
+	// Ensure DB configuration and environment remain consistent with the driver being tested
+	config.DB = dbConfig.DB
+	if origDBURL != "" {
+		os.Setenv("DATABASE_URL", origDBURL)
+	} else {
+		os.Setenv("DATABASE_URL", dbConfig.DB.URL)
+	}
+	if origDriver != "" {
+		os.Setenv("GOTRUE_DB_DRIVER", origDriver)
+	} else {
+		os.Setenv("GOTRUE_DB_DRIVER", dbConfig.DB.Driver)
+	}
 
 	conn, err := test.SetupDBConnection(config)
 	require.NoError(t, err)
