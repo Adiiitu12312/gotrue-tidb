@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,8 +20,17 @@ import (
 
 const (
 	apiTestVersion = "1"
-	apiTestConfig  = "../../hack/test.env"
 )
+
+func getAPITestConfig() string {
+	driver := os.Getenv("GOTRUE_DB_DRIVER")
+	if driver == "mysql" {
+		return "../../hack/test.mysql.env"
+	} else if driver == "tidb" {
+		return "../../hack/test.tidb.env"
+	}
+	return "../../hack/test.env"
+}
 
 func init() {
 	crypto.PasswordHashCost = crypto.QuickHashCost
@@ -30,7 +40,7 @@ func init() {
 // Using this function allows us to keep track of the database connection
 // and cleaning up data between tests.
 func setupAPIForTest(opts ...Option) (*API, *conf.GlobalConfiguration, error) {
-	config, err := confload.LoadGlobal(apiTestConfig)
+	config, err := confload.LoadGlobal(getAPITestConfig())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -44,7 +54,7 @@ func setupAPIForTest(opts ...Option) (*API, *conf.GlobalConfiguration, error) {
 }
 
 func setupAPIForTestWithCallback(cb func(*conf.GlobalConfiguration, *storage.Connection)) (*API, *conf.GlobalConfiguration, error) {
-	config, err := confload.LoadGlobal(apiTestConfig)
+	config, err := confload.LoadGlobal(getAPITestConfig())
 	if err != nil {
 		return nil, nil, err
 	}

@@ -52,6 +52,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y default-mysql-client
           mysql -h 127.0.0.1 -P 4000 -u root < hack/init_mysql.sql
+          mysql -h 127.0.0.1 -P 4000 -u root -e "SET GLOBAL tidb_txn_mode = 'pessimistic'; SET GLOBAL transaction_isolation = 'READ-COMMITTED';"
       - name: Run migrations
         run: |
           make migrate_tidb
