@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -564,6 +565,9 @@ func (ts *RefreshTokenV2Suite) TestConcurrentReuse() {
 	for i := 1; i < len(endTimes); i += 1 {
 		require.True(ts.T(), endTimes[i-1].Before(endTimes[i]))
 	}
+
+	// Sort causes so the initial refresh ("") appears first regardless of concurrent goroutine channel delivery order
+	sort.Strings(causes)
 
 	// first refresh is OK
 	require.Equal(ts.T(), "", causes[0])

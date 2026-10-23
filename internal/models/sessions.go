@@ -285,9 +285,14 @@ func FindSessionByID(tx *storage.Connection, id uuid.UUID, forUpdate bool) (*Ses
 
 			return nil, err
 		}
+
+		if err := tx.Where("session_id = ?", id).All(&session.AMRClaims); err != nil {
+			return nil, errors.Wrap(err, "error finding session amr claims")
+		}
+
+		return session, nil
 	}
 
-	// once the rows are locked (if forUpdate was true), we can query again using pop
 	if err := tx.Eager().Q().Where("id = ?", id).First(session); err != nil {
 		if IsNoRowsError(err) {
 			return nil, SessionNotFoundError{}
