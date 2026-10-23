@@ -497,19 +497,19 @@ func DeleteFactorsByUserId(tx *storage.Connection, userId uuid.UUID) error {
 }
 
 func DeleteExpiredFactors(tx *storage.Connection, validityDuration time.Duration) error {
-	totalSeconds := int64(validityDuration / time.Second)
 	factorTable := (&pop.Model{Value: Factor{}}).TableName()
 	challengeTable := (&pop.Model{Value: Challenge{}}).TableName()
+	cutoff := time.Now().UTC().Add(-validityDuration)
 
 	var query string
 	if tx.IsMySQL() {
-		query = fmt.Sprintf("delete from %s where status != 'verified' and not exists (select * from %s where %s.id = %s.factor_id ) and created_at + interval %d second < current_timestamp;",
-			tx.TableQuote(factorTable), tx.TableQuote(challengeTable), tx.TableQuote(factorTable), tx.TableQuote(challengeTable), totalSeconds)
+		query = fmt.Sprintf("delete from %s where status != 'verified' and not exists (select 1 from %s where %s.id = %s.factor_id) and created_at <= ?",
+			tx.TableQuote(factorTable), tx.TableQuote(challengeTable), tx.TableQuote(factorTable), tx.TableQuote(challengeTable))
 	} else {
-		validityInterval := fmt.Sprintf("interval '%d seconds'", totalSeconds)
-		query = fmt.Sprintf(`delete from %q where status != 'verified' and not exists (select * from %q where %q.id = %q.factor_id ) and created_at + %s < current_timestamp;`, factorTable, challengeTable, factorTable, challengeTable, validityInterval)
+		query = fmt.Sprintf("delete from %q where status != 'verified' and not exists (select 1 from %q where %q.id = %q.factor_id) and created_at <= ?",
+			factorTable, challengeTable, factorTable, challengeTable)
 	}
-	if err := tx.RawQuery(query).Exec(); err != nil {
+	if err := tx.RawQuery(query, cutoff).Exec(); err != nil {
 		return err
 	}
 	return nil

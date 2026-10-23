@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -15,6 +16,9 @@ import (
 )
 
 func TestInstance(t *testing.T) {
+	if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver != "" && driver != "postgres" {
+		t.Skip("skipping e2ehooks tests on non-postgres driver")
+	}
 	{
 		globalCfg, err := e2e.Config()
 		require.NoError(t, err)

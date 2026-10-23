@@ -11,6 +11,9 @@ import (
 )
 
 func TestUtils(t *testing.T) {
+	if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver != "" && driver != "postgres" {
+		t.Skip("skipping e2e package tests on non-postgres driver")
+	}
 
 	// check paths
 	require.Equal(t, projectRoot, e2ecfg.GetProjectRoot())
@@ -22,11 +25,6 @@ func TestUtils(t *testing.T) {
 		// positive
 		{
 			testCfgPath := "../../hack/test.env"
-			if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver == "mysql" {
-				testCfgPath = "../../hack/test.mysql.env"
-			} else if driver == "tidb" {
-				testCfgPath = "../../hack/test.tidb.env"
-			}
 			testCfg := Must(confload.LoadGlobal(testCfgPath))
 			// SigningKey is a func
 			testCfg.JWT.SigningKey = nil

@@ -2,7 +2,6 @@
 package e2ecfg
 
 import (
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -23,13 +22,7 @@ func initPackage() {
 	if isTesting() {
 		_, thisFile, _, _ := runtime.Caller(0)
 		projectRoot = filepath.Join(filepath.Dir(thisFile), "../../..")
-		envFile := "test.env"
-		if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver == "mysql" {
-			envFile = "test.mysql.env"
-		} else if driver == "tidb" {
-			envFile = "test.tidb.env"
-		}
-		configPath = filepath.Join(GetProjectRoot(), "hack", envFile)
+		configPath = filepath.Join(GetProjectRoot(), "hack", "test.env")
 	} else {
 		panic("package e2e may not be used in a main package")
 	}

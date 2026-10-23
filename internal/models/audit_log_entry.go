@@ -192,7 +192,11 @@ func FindAuditLogEntries(tx *storage.Connection, filterColumns []string, filterV
 		values := make([]interface{}, len(filterColumns))
 
 		for idx, col := range filterColumns {
-			fmt.Fprintf(builder, "payload->>'%s' ILIKE ?", col)
+			if tx.IsMySQL() {
+				fmt.Fprintf(builder, "LOWER(payload->>'$.%s') LIKE LOWER(?)", col)
+			} else {
+				fmt.Fprintf(builder, "payload->>'%s' ILIKE ?", col)
+			}
 			values[idx] = lf
 
 			if idx+1 < len(filterColumns) {

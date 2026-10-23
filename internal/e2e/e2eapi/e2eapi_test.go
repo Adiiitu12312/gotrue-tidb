@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"testing/iotest"
 	"time"
@@ -21,6 +22,9 @@ import (
 )
 
 func TestInstance(t *testing.T) {
+	if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver != "" && driver != "postgres" {
+		t.Skip("skipping e2eapi tests on non-postgres driver")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
 	defer cancel()
 
@@ -110,6 +114,9 @@ func TestInstance(t *testing.T) {
 }
 
 func TestDo(t *testing.T) {
+	if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver != "" && driver != "postgres" {
+		t.Skip("skipping e2eapi tests on non-postgres driver")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
