@@ -202,6 +202,8 @@ func (ts *AuthTestSuite) TestMaybeLoadUserOrSession() {
 	require.NoError(ts.T(), ts.API.db.Create(s))
 
 	require.NoError(ts.T(), ts.API.db.Load(s))
+	s, err = models.FindSessionByID(ts.API.db, s.ID, false)
+	require.NoError(ts.T(), err)
 
 	cases := []struct {
 		Desc            string

@@ -2,6 +2,8 @@
 package e2e
 
 import (
+	"os"
+
 	"github.com/supabase/auth/internal/conf"
 	"github.com/supabase/auth/internal/conf/confload"
 	"github.com/supabase/auth/internal/e2e/e2ecfg"
@@ -16,10 +18,27 @@ var (
 
 // Config calls confload.LoadGlobal using GetConfigPath().
 func Config() (*conf.GlobalConfiguration, error) {
+	origDriver := os.Getenv("GOTRUE_DB_DRIVER")
+	origURL := os.Getenv("DATABASE_URL")
+	if origURL == "" {
+		origURL = os.Getenv("GOTRUE_DB_DATABASE_URL")
+	}
+
 	globalCfg, err := confload.LoadGlobal(configPath)
 	if err != nil {
 		return nil, err
 	}
+
+	if origDriver != "" {
+		globalCfg.DB.Driver = origDriver
+		_ = os.Setenv("GOTRUE_DB_DRIVER", origDriver)
+	}
+	if origURL != "" {
+		globalCfg.DB.URL = origURL
+		_ = os.Setenv("DATABASE_URL", origURL)
+		_ = os.Setenv("GOTRUE_DB_DATABASE_URL", origURL)
+	}
+
 	return globalCfg, nil
 }
 
