@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,8 +63,18 @@ func (ts *RefreshTokenV2Suite) SetupTest() {
 	ts.User = u
 }
 
+func getTokensTestConfig() string {
+	driver := os.Getenv("GOTRUE_DB_DRIVER")
+	if driver == "mysql" {
+		return "../../hack/test.mysql.env"
+	} else if driver == "tidb" {
+		return "../../hack/test.tidb.env"
+	}
+	return "../../hack/test.env"
+}
+
 func (ts *RefreshTokenV2Suite) config() *conf.GlobalConfiguration {
-	config, err := confload.LoadGlobal("../../hack/test.env")
+	config, err := confload.LoadGlobal(getTokensTestConfig())
 	if err != nil {
 		panic("failed to load config")
 	}
@@ -1294,7 +1305,7 @@ func TestAsRedirectURL(t *testing.T) {
 }
 
 func TestGenerateAccessTokenAllowLowAAL(t *testing.T) {
-	config, err := confload.LoadGlobal("../../hack/test.env")
+	config, err := confload.LoadGlobal(getTokensTestConfig())
 	require.NoError(t, err)
 
 	conn, err := test.SetupDBConnection(config)
