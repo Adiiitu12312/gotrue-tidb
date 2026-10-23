@@ -289,8 +289,13 @@ func (ts *OAuthAuthorizeTestSuite) createAuthorization(clientID uuid.UUID, scope
 
 // expireAuthorization pushes expires_at into the past so IsExpired() returns true
 func (ts *OAuthAuthorizeTestSuite) expireAuthorization(authorizationID string) {
+	now := time.Now().UTC()
+	createdAt := now.Add(-2 * time.Hour)
+	expiresAt := now.Add(-1 * time.Hour)
 	require.NoError(ts.T(), ts.DB.RawQuery(
-		"UPDATE oauth_authorizations SET created_at = now() - interval '2 hours', expires_at = now() - interval '1 hour' WHERE authorization_id = ?",
+		"UPDATE oauth_authorizations SET created_at = ?, expires_at = ? WHERE authorization_id = ?",
+		createdAt,
+		expiresAt,
 		authorizationID,
 	).Exec())
 }

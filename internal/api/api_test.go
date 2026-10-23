@@ -22,6 +22,8 @@ const (
 	apiTestVersion = "1"
 )
 
+var apiTestConfig = getAPITestConfig()
+
 func getAPITestConfig() string {
 	driver := os.Getenv("GOTRUE_DB_DRIVER")
 	if driver == "mysql" {

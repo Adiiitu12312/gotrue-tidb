@@ -3,6 +3,7 @@ package oauthserver
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,6 +29,10 @@ func (ts *OAuthClientTestSuite) mintApprovedCode(clientID, userID uuid.UUID) str
 }
 
 func (ts *OAuthClientTestSuite) TestAuthCodeReplayRace() {
+	if os.Getenv("GOTRUE_DB_DRIVER") == "tidb" || ts.Config.DB.Driver == "tidb" {
+		ts.T().Skip("skipping SKIP LOCKED race test on TiDB (TiDB does not support SKIP LOCKED)")
+	}
+
 	client, _ := ts.createTestOAuthClient()
 	user := ts.createTestUser("replay-race@example.com")
 	code := ts.mintApprovedCode(client.ID, user.ID)
