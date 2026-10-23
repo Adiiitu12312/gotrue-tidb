@@ -177,7 +177,7 @@ func FindFlowStateByIDForUpdate(tx *storage.Connection, id string) (*FlowState, 
 	// Pop does not provide a way to execute FOR UPDATE queries,
 	// so we use a raw query to lock the row first.
 	if err := tx.RawQuery(
-		fmt.Sprintf("SELECT * FROM %q WHERE id = ? LIMIT 1 FOR UPDATE SKIP LOCKED", obj.TableName()),
+		fmt.Sprintf("SELECT * FROM %q WHERE id = ? LIMIT 1 %s", obj.TableName(), tx.ForUpdateClause()),
 		id,
 	).First(obj); err != nil {
 		if errors.Cause(err) == sql.ErrNoRows {

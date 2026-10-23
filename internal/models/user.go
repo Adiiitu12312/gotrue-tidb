@@ -781,7 +781,7 @@ func findUserWithLegacyRefreshToken(tx *storage.Connection, token string, forUpd
 		// queries which lock the rows affected by the query from
 		// being accessed by any other transaction that also uses FOR
 		// UPDATE
-		if err := tx.RawQuery(fmt.Sprintf("SELECT * FROM %q WHERE token = ? LIMIT 1 FOR UPDATE SKIP LOCKED;", refreshToken.TableName()), token).First(refreshToken); err != nil {
+		if err := tx.RawQuery(fmt.Sprintf("SELECT * FROM %q WHERE token = ? LIMIT 1 %s;", refreshToken.TableName(), tx.ForUpdateClause()), token).First(refreshToken); err != nil {
 			if errors.Cause(err) == sql.ErrNoRows {
 				return nil, nil, nil, RefreshTokenNotFoundError{}
 			}

@@ -131,7 +131,7 @@ func CountRecoveryCodes(tx *storage.Connection, mfaRecoveryCodeSetID uuid.UUID) 
 		Remaining int `db:"remaining"`
 	}{}
 	err := tx.RawQuery(
-		"SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE consumed_at IS NULL) AS remaining FROM "+
+		"SELECT COUNT(*) AS total, COUNT(CASE WHEN consumed_at IS NULL THEN 1 END) AS remaining FROM "+
 			(RecoveryCodeEntry{}).TableName()+" WHERE mfa_recovery_code_set_id = ?",
 		mfaRecoveryCodeSetID,
 	).First(&counts)

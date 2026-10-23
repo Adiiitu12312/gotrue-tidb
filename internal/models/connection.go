@@ -76,6 +76,19 @@ func TruncateAll(conn *storage.Connection) error {
 			(&pop.Model{Value: WebAuthnChallenge{}}).TableName(),
 		}
 
+		if tx.IsMySQL() {
+			if err := tx.RawQuery("SET FOREIGN_KEY_CHECKS = 0;").Exec(); err != nil {
+				return err
+			}
+			for _, tableName := range tables {
+				if err := tx.RawQuery("DELETE FROM " + tableName).Exec(); err != nil {
+					_ = tx.RawQuery("SET FOREIGN_KEY_CHECKS = 1;").Exec()
+					return err
+				}
+			}
+			return tx.RawQuery("SET FOREIGN_KEY_CHECKS = 1;").Exec()
+		}
+
 		for _, tableName := range tables {
 			if err := tx.RawQuery("DELETE FROM " + tableName + " CASCADE").Exec(); err != nil {
 				return err

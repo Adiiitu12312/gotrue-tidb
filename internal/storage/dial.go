@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/XSAM/otelsql"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gobuffalo/pop/v6"
 	"github.com/gobuffalo/pop/v6/columns"
 	"github.com/jmoiron/sqlx"
@@ -47,6 +48,9 @@ func DialContext(
 	}
 
 	sqldb, ok := popConnToStd(db)
+	if ok && cd.Dialect == "mysql" {
+		_, _ = sqldb.ExecContext(ctx, "SET SESSION sql_mode = CONCAT_WS(',', @@sql_mode, 'ANSI_QUOTES');")
+	}
 	if ok && config.Metrics.Enabled {
 		registerOpenTelemetryDatabaseStats(config, sqldb)
 	}
@@ -108,11 +112,30 @@ func applyDBDriver(
 	}
 
 	driver := ""
-	if config.DB.Driver != "postgres" {
-		logrus.Warn("DEPRECATION NOTICE: only PostgreSQL is supported by Supabase's GoTrue, will be removed soon")
-	} else {
-		// pop v5 uses pgx as the default PostgreSQL driver
+	switch config.DB.Driver {
+	case "postgres":
 		driver = "pgx"
+	case "mysql", "tidb":
+		cd.Dialect = "mysql"
+		driver = "mysql"
+		if cd.Options == nil {
+			cd.Options = make(map[string]string)
+		}
+		if _, ok := cd.Options["parseTime"]; !ok {
+			cd.Options["parseTime"] = "true"
+		}
+		if _, ok := cd.Options["multiStatements"]; !ok {
+			cd.Options["multiStatements"] = "true"
+		}
+		if _, ok := cd.Options["charset"]; !ok {
+			cd.Options["charset"] = "utf8mb4"
+		}
+		if _, ok := cd.Options["sql_mode"]; !ok {
+			cd.Options["sql_mode"] = "ANSI_QUOTES"
+		}
+	default:
+		logrus.Warnf("driver %q: defaulting driver to %q", config.DB.Driver, config.DB.Driver)
+		driver = config.DB.Driver
 	}
 
 	if driver != "" && (config.Tracing.Enabled || config.Metrics.Enabled) {
@@ -287,6 +310,9 @@ func (c *Connection) showMaxConns(ctx context.Context) (int, error) {
 
 	var maxConns int
 	err := db.Transaction(func(tx *Connection) error {
+		if tx.Dialect != nil && (tx.Dialect.Name() == "mysql" || tx.Dialect.Name() == "tidb") {
+			return tx.RawQuery("SELECT @@max_connections;").First(&maxConns)
+		}
 		return tx.RawQuery("SHOW max_connections;").First(&maxConns)
 	})
 	if err != nil {
@@ -407,6 +433,20 @@ func (c *Connection) WithContext(ctx context.Context) *Connection {
 	cpy := c.Copy()
 	cpy.Connection = cpy.Connection.WithContext(ctx)
 	return cpy
+}
+
+// IsMySQL returns true if the connection is using MySQL or TiDB dialect.
+func (c *Connection) IsMySQL() bool {
+	return c != nil && c.Dialect != nil && (c.Dialect.Name() == "mysql" || c.Dialect.Name() == "tidb")
+}
+
+// ForUpdateClause returns the row-locking clause appropriate for the current dialect.
+// TiDB does not support SKIP LOCKED; Postgres and MySQL 8.0+ do.
+func (c *Connection) ForUpdateClause() string {
+	if c.IsMySQL() {
+		return "FOR UPDATE"
+	}
+	return "FOR UPDATE SKIP LOCKED"
 }
 
 func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, error) {

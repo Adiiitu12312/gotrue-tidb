@@ -33,6 +33,11 @@ const (
 // Returns an error either from index creation failure (partial or complete) or if the advisory lock
 // could not be acquired.
 func CreateIndexes(ctx context.Context, config *conf.GlobalConfiguration, le *logrus.Entry) error {
+	if config.DB.Driver == "mysql" || config.DB.Driver == "tidb" {
+		le.Info("Skipping Postgres-specific indexworker for MySQL/TiDB")
+		return nil
+	}
+
 	u, err := url.Parse(config.DB.URL)
 	if err != nil {
 		le.WithError(err).Fatal("Error parsing db connection url")
@@ -40,6 +45,11 @@ func CreateIndexes(ctx context.Context, config *conf.GlobalConfiguration, le *lo
 
 	if config.DB.Driver == "" && config.DB.URL != "" {
 		config.DB.Driver = u.Scheme
+	}
+
+	if config.DB.Driver == "mysql" || config.DB.Driver == "tidb" {
+		le.Info("Skipping Postgres-specific indexworker for MySQL/TiDB")
+		return nil
 	}
 
 	q := u.Query()

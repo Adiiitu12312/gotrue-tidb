@@ -1,27 +1,56 @@
-# Auth - Authentication and User Management by Supabase
+# Auth (GoTrue) ported for MySQL & TiDB
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/auth/badge.svg?branch=master)](https://coveralls.io/github/supabase/auth?branch=master)
+[![Test](https://github.com/Adiiitu12312/gotrue-tidb/actions/workflows/test.yml/badge.svg)](https://github.com/Adiiitu12312/gotrue-tidb/actions/workflows/test.yml)
 
-Auth is a user management and authentication server written in Go that powers
-[Supabase](https://supabase.com)'s features such as:
+Auth is a high-performance user management and authentication server (originally built by Supabase / Netlify GoTrue) ported for **MySQL 8.0+** and **PingCAP TiDB** (as well as PostgreSQL).
 
-- Issuing JWTs
-- Row Level Security with PostgREST
-- User management
-- Sign in with email, password, magic link, phone number
-- Sign in with external providers (Google, Apple, Facebook, Discord, ...)
-
-It is originally based on the excellent
-[GoTrue codebase by Netlify](https://github.com/netlify/gotrue), however both have diverged significantly in features and capabilities.
-
-If you wish to contribute to the project, please refer to the [contributing guide](/CONTRIBUTING.md).
+### TiDB / MySQL Support Highlights
+- **Native TiDB & MySQL Driver**: Uses `go-sql-driver/mysql` with Buffalo Pop MySQL dialect.
+- **TiDB Distributed SQL Compatible**: Adapted transaction locking (`FOR UPDATE` without unsupported `SKIP LOCKED`), MySQL 8.0+ / TiDB generated columns, and MySQL `ON DUPLICATE KEY UPDATE` / `SET FOREIGN_KEY_CHECKS = 0`.
+- **Integrated Migrations**: Provides `migrations/00_init_auth_schema.mysql.up.sql` covering all 25 Supabase Auth entities (users, identities, sessions, mfa, sso, passkeys, recovery codes, and oauth clients).
+- **Zero Local Installs Required**: Automated CI/CD test workflows on GitHub Actions running with containerized MySQL and TiDB services.
 
 ## Table of Contents
 
+- [TiDB / MySQL Quick Start](#tidb--mysql-quick-start)
 - [Quick Start](#quick-start)
 - [Running in Production](#running-in-production)
 - [Configuration](#configuration)
 - [Endpoints](#endpoints)
+
+## TiDB / MySQL Quick Start
+
+### 1. Using TiDB
+Copy [`example.tidb.env`](example.tidb.env) to `.env`:
+```bash
+GOTRUE_DB_DRIVER="tidb"
+DB_NAMESPACE="auth"
+DATABASE_URL="mysql://root:@tcp(localhost:4000)/auth?parseTime=true&multiStatements=true"
+```
+Start TiDB and Auth with Docker Compose:
+```bash
+docker compose -f docker-compose-tidb.yml up
+```
+Or run migrations manually:
+```bash
+make migrate_tidb
+```
+
+### 2. Using MySQL 8.0+
+Copy [`example.mysql.env`](example.mysql.env) to `.env`:
+```bash
+GOTRUE_DB_DRIVER="mysql"
+DB_NAMESPACE="auth"
+DATABASE_URL="mysql://supabase_auth_admin:root@tcp(localhost:3306)/auth?parseTime=true&multiStatements=true"
+```
+Start MySQL and Auth with Docker Compose:
+```bash
+docker compose -f docker-compose-mysql.yml up
+```
+Or run migrations manually:
+```bash
+make migrate_mysql
+```
 
 ## Quick Start
 

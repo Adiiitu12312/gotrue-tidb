@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gobuffalo/pop/v6"
 	"github.com/gobuffalo/pop/v6/logging"
 	"github.com/pkg/errors"
@@ -66,16 +67,37 @@ func migrate(cmd *cobra.Command, args []string) {
 		pop.SetLogger(popNoopLogger)
 	}
 
+	dialect := globalConfig.DB.Driver
+	if dialect == "tidb" {
+		dialect = "mysql"
+	}
+
 	q := u.Query()
-	q.Add("application_name", "auth_migrations")
+	if dialect == "postgres" {
+		q.Add("application_name", "auth_migrations")
+	} else if dialect == "mysql" {
+		if q.Get("parseTime") == "" {
+			q.Set("parseTime", "true")
+		}
+		if q.Get("multiStatements") == "" {
+			q.Set("multiStatements", "true")
+		}
+	}
 	u.RawQuery = q.Encode()
+
 	deets := &pop.ConnectionDetails{
-		Dialect: globalConfig.DB.Driver,
+		Dialect: dialect,
 		URL:     u.String(),
 	}
 	deets.Options = map[string]string{
 		"migration_table_name": "schema_migrations",
 		"Namespace":            globalConfig.DB.Namespace,
+	}
+	if dialect == "mysql" {
+		deets.Options["parseTime"] = "true"
+		deets.Options["multiStatements"] = "true"
+		deets.Options["charset"] = "utf8mb4"
+		deets.Options["sql_mode"] = "ANSI_QUOTES"
 	}
 
 	db, err := pop.NewConnection(deets)

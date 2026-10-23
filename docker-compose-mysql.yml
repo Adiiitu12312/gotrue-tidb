@@ -1,0 +1,40 @@
+services:
+  auth:
+    depends_on:
+      mysql:
+        condition: service_healthy
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev
+    ports:
+      - '9999:9999'
+      - '9100:9100'
+    environment:
+      - GOTRUE_DB_DRIVER=mysql
+      - GOTRUE_DB_DATABASE_URL=mysql://supabase_auth_admin:root@tcp(mysql:3306)/auth?parseTime=true&multiStatements=true
+      - GOTRUE_DB_MIGRATIONS_PATH=/go/src/github.com/supabase/auth/migrations
+      - DB_NAMESPACE=auth
+    volumes:
+      - ./:/go/src/github.com/supabase/auth
+    command: CompileDaemon --build="make build" --directory=/go/src/github.com/supabase/auth --recursive=true -pattern="(.+\.go|.+\.env)" -exclude=auth -exclude=auth-arm64 -exclude=.env --command="/go/src/github.com/supabase/auth/auth -c=example.mysql.env"
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - '3306:3306'
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=auth
+      - MYSQL_USER=supabase_auth_admin
+      - MYSQL_PASSWORD=root
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - ./hack/init_mysql.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

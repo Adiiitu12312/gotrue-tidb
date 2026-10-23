@@ -1,0 +1,36 @@
+services:
+  auth:
+    depends_on:
+      tidb:
+        condition: service_healthy
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev
+    ports:
+      - '9999:9999'
+      - '9100:9100'
+    environment:
+      - GOTRUE_DB_DRIVER=tidb
+      - GOTRUE_DB_DATABASE_URL=mysql://root:@tcp(tidb:4000)/auth?parseTime=true&multiStatements=true
+      - GOTRUE_DB_MIGRATIONS_PATH=/go/src/github.com/supabase/auth/migrations
+      - DB_NAMESPACE=auth
+    volumes:
+      - ./:/go/src/github.com/supabase/auth
+    command: CompileDaemon --build="make build" --directory=/go/src/github.com/supabase/auth --recursive=true -pattern="(.+\.go|.+\.env)" -exclude=auth -exclude=auth-arm64 -exclude=.env --command="/go/src/github.com/supabase/auth/auth -c=example.tidb.env"
+
+  tidb:
+    image: pingcap/tidb:v8.1.0
+    ports:
+      - '4000:4000'
+      - '10080:10080'
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:10080/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - ./hack/init_mysql.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - tidb_data:/tmp/tidb
+
+volumes:
+  tidb_data:
