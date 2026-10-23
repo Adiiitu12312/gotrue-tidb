@@ -16,6 +16,8 @@ import (
 	"github.com/supabase/auth/internal/conf/confload"
 )
 
+var apiTestConfig = getAPITestConfig()
+
 func getAPITestConfig() string {
 	driver := os.Getenv("GOTRUE_DB_DRIVER")
 	if driver == "mysql" {
@@ -28,7 +30,7 @@ func getAPITestConfig() string {
 
 func TestLogger(t *testing.T) {
 	var logBuffer bytes.Buffer
-	config, err := confload.LoadGlobal(getAPITestConfig())
+	config, err := confload.LoadGlobal(apiTestConfig)
 	require.NoError(t, err)
 
 	config.Logging.Level = "info"
