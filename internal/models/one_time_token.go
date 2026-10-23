@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"strings"

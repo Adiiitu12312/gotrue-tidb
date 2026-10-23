@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"slices"
