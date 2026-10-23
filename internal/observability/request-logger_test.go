@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -15,11 +16,19 @@ import (
 	"github.com/supabase/auth/internal/conf/confload"
 )
 
-const apiTestConfig = "../../hack/test.env"
+func getAPITestConfig() string {
+	driver := os.Getenv("GOTRUE_DB_DRIVER")
+	if driver == "mysql" {
+		return "../../hack/test.mysql.env"
+	} else if driver == "tidb" {
+		return "../../hack/test.tidb.env"
+	}
+	return "../../hack/test.env"
+}
 
 func TestLogger(t *testing.T) {
 	var logBuffer bytes.Buffer
-	config, err := confload.LoadGlobal(apiTestConfig)
+	config, err := confload.LoadGlobal(getAPITestConfig())
 	require.NoError(t, err)
 
 	config.Logging.Level = "info"

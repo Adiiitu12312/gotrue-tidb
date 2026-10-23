@@ -629,6 +629,9 @@ func (ts *RecoveryCodesTestSuite) TestRecoveryCodesVerifyLockout() {
 }
 
 func (ts *RecoveryCodesTestSuite) setVerificationHook(functionName, functionSQL string) {
+	if ts.Config.DB.Driver != "postgres" {
+		ts.T().Skip("skipping PL/pgSQL function test on non-postgres driver")
+	}
 	ts.Config.Hook.MFAVerificationAttempt.Enabled = true
 	ts.Config.Hook.MFAVerificationAttempt.URI = "pg-functions://postgres/auth/" + functionName
 	require.NoError(ts.T(), ts.Config.Hook.MFAVerificationAttempt.PopulateExtensibilityPoint())

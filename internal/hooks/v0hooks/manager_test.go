@@ -26,6 +26,9 @@ func TestHooks(t *testing.T) {
 	defer cancel()
 
 	globalCfg := e2e.Must(e2e.Config())
+	if globalCfg.DB.Driver != "postgres" {
+		t.Skip("skipping v0hooks tests on non-postgres driver")
+	}
 	db := e2e.Must(e2e.Conn(globalCfg))
 	httpDr := hookshttp.New(hookshttp.WithTimeout(time.Second / 10))
 	pgfuncDr := hookspgfunc.New(db, hookspgfunc.WithTimeout(time.Second/10))

@@ -634,6 +634,9 @@ func (ts *TokenTestSuite) TestMagicLinkPKCESignIn() {
 }
 
 func (ts *TokenTestSuite) TestPasswordVerificationHook() {
+	if ts.Config.DB.Driver != "postgres" {
+		ts.T().Skip("skipping PL/pgSQL function test on non-postgres driver")
+	}
 	type verificationHookTestcase struct {
 		desc            string
 		uri             string
@@ -695,6 +698,9 @@ func (ts *TokenTestSuite) TestPasswordVerificationHook() {
 }
 
 func (ts *TokenTestSuite) TestCustomAccessToken() {
+	if ts.Config.DB.Driver != "postgres" {
+		ts.T().Skip("skipping PL/pgSQL function test on non-postgres driver")
+	}
 	type customAccessTokenTestcase struct {
 		desc            string
 		uri             string
@@ -841,6 +847,9 @@ end; $$ language plpgsql;`,
 }
 
 func (ts *TokenTestSuite) TestAllowSelectAuthenticationMethods() {
+	if ts.Config.DB.Driver != "postgres" {
+		ts.T().Skip("skipping PL/pgSQL function test on non-postgres driver")
+	}
 
 	companyUser, err := models.NewUser("12345678", "test@company.com", "password", ts.Config.JWT.Aud, nil)
 	t := time.Now()

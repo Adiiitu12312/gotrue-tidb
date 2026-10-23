@@ -537,5 +537,8 @@ func (ts *IndexWorkerTestSuite) TestCreateIndexesSkipsOnOrioleDB() {
 
 // Run the test suite
 func TestIndexWorker(t *testing.T) {
+	if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver != "" && driver != "postgres" {
+		t.Skip("skipping postgres-specific indexworker tests on non-postgres driver")
+	}
 	suite.Run(t, new(IndexWorkerTestSuite))
 }

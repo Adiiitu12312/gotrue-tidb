@@ -22,6 +22,9 @@ func TestDispatch(t *testing.T) {
 	defer cancel()
 
 	globalCfg := e2e.Must(e2e.Config())
+	if globalCfg.DB.Driver != "postgres" {
+		t.Skip("skipping pgfunc tests on non-postgres driver")
+	}
 	db := e2e.Must(e2e.Conn(globalCfg))
 
 	type testCase struct {

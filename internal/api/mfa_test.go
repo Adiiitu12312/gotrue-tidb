@@ -468,6 +468,9 @@ func (ts *MFATestSuite) TestChallengeTOTPFactor() {
 }
 
 func (ts *MFATestSuite) TestChallengeSMSFactor() {
+	if ts.Config.DB.Driver != "postgres" {
+		ts.T().Skip("skipping PL/pgSQL function test on non-postgres driver")
+	}
 	// Challenge should still work with phone provider disabled
 	ts.Config.External.Phone.Enabled = false
 	ts.Config.Hook.SendSMS.Enabled = true
@@ -628,7 +631,7 @@ func (ts *MFATestSuite) TestMFAVerifyFactor() {
 				// Set challenge creation so that it has expired in present time.
 				newCreatedAt := time.Now().UTC().Add(-1 * time.Second * time.Duration(ts.Config.MFA.ChallengeExpiryDuration+1))
 				// created_at is managed by buffalo(ORM) needs to be raw query to be updated
-				err := ts.API.db.RawQuery("UPDATE auth.mfa_challenges SET created_at = ? WHERE factor_id = ?", newCreatedAt, f.ID).Exec()
+				err := ts.API.db.RawQuery(fmt.Sprintf("UPDATE %s SET created_at = ? WHERE factor_id = ?", models.Challenge{}.TableName()), newCreatedAt, f.ID).Exec()
 				require.NoError(ts.T(), err, "Error updating new test challenge")
 			}
 
@@ -941,6 +944,9 @@ func performEnrollAndVerify(ts *MFATestSuite, token string, requireStatusOK bool
 }
 
 func (ts *MFATestSuite) TestVerificationHooks() {
+	if ts.Config.DB.Driver != "postgres" {
+		ts.T().Skip("skipping PL/pgSQL function test on non-postgres driver")
+	}
 	type verificationHookTestCase struct {
 		desc                string
 		enabled             bool

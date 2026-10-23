@@ -212,6 +212,9 @@ func (ts *HooksTestSuite) TestShouldReturnErrorForNonJSONContentType() {
 }
 
 func (ts *HooksTestSuite) TestInvokeHookIntegration() {
+	if ts.Config.DB.Driver != "postgres" {
+		ts.T().Skip("skipping PL/pgSQL function test on non-postgres driver")
+	}
 	// We use the Send Email Hook as illustration
 	defer gock.OffAll()
 	hookFunctionSQL := `

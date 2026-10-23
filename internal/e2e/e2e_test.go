@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,6 +22,11 @@ func TestUtils(t *testing.T) {
 		// positive
 		{
 			testCfgPath := "../../hack/test.env"
+			if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver == "mysql" {
+				testCfgPath = "../../hack/test.mysql.env"
+			} else if driver == "tidb" {
+				testCfgPath = "../../hack/test.tidb.env"
+			}
 			testCfg := Must(confload.LoadGlobal(testCfgPath))
 			// SigningKey is a func
 			testCfg.JWT.SigningKey = nil

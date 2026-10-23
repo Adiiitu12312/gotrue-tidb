@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/supabase/auth/internal/conf/confload"
+	"github.com/supabase/auth/internal/e2e"
 	"github.com/supabase/auth/internal/hooks/v0hooks"
 )
 
 func TestInstance(t *testing.T) {
 	{
-		globalCfg, err := confload.LoadGlobal("../../../hack/test.env")
+		globalCfg, err := e2e.Config()
 		require.NoError(t, err)
 
 		globalCfg.DB.Driver = ""
@@ -28,7 +28,7 @@ func TestInstance(t *testing.T) {
 	}
 
 	{
-		globalCfg, err := confload.LoadGlobal("../../../hack/test.env")
+		globalCfg, err := e2e.Config()
 		require.NoError(t, err)
 
 		inst, err := New(globalCfg)

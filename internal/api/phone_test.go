@@ -268,6 +268,9 @@ func (ts *PhoneTestSuite) TestMissingSmsProviderConfig() {
 	}
 }
 func (ts *PhoneTestSuite) TestSendSMSHook() {
+	if ts.Config.DB.Driver != "postgres" {
+		ts.T().Skip("skipping PL/pgSQL function test on non-postgres driver")
+	}
 	u, err := models.FindUserByPhoneAndAudience(ts.API.db, "123456789", ts.Config.JWT.Aud)
 	require.NoError(ts.T(), err)
 	now := time.Now()
