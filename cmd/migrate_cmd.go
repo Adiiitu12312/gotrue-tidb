@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gobuffalo/pop/v6"
@@ -36,8 +37,23 @@ func popProgressLogger(lvl logging.Level, s string, args ...interface{}) {
 
 func popNoopLogger(logging.Level, string, ...interface{}) {}
 
+func cleanDBURL(rawURL string) string {
+	if strings.Contains(rawURL, "@tcp(") {
+		idx := strings.Index(rawURL, "@tcp(")
+		if idx != -1 {
+			afterAt := rawURL[idx+5:]
+			closeParen := strings.Index(afterAt, ")")
+			if closeParen != -1 {
+				rawURL = rawURL[:idx+1] + afterAt[:closeParen] + afterAt[closeParen+1:]
+			}
+		}
+	}
+	return rawURL
+}
+
 func migrate(cmd *cobra.Command, args []string) {
 	globalConfig := loadGlobalConfig(cmd.Context())
+	globalConfig.DB.URL = cleanDBURL(globalConfig.DB.URL)
 	u, err := url.Parse(globalConfig.DB.URL)
 	if err != nil {
 		logrus.Fatalf("%+v", errors.Wrap(err, "parsing db connection url"))
@@ -108,6 +124,10 @@ func migrate(cmd *cobra.Command, args []string) {
 
 	if err := db.Open(); err != nil {
 		log.Fatalf("%+v", errors.Wrap(err, "checking database connection"))
+	}
+
+	if dialect == "mysql" {
+		_ = db.RawQuery("SET SESSION sql_mode = CONCAT_WS(',', @@sql_mode, 'ANSI_QUOTES');").Exec()
 	}
 
 	log.Debugf("Reading migrations from executable")

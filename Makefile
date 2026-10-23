@@ -120,10 +120,10 @@ migrate_tidb: ## Run database migrations for TiDB.
 	GOTRUE_DB_DRIVER=tidb hack/migrate.sh auth
 
 test_mysql: auth ## Run tests against MySQL.
-	GOTRUE_DB_DRIVER=mysql DATABASE_URL="mysql://supabase_auth_admin:root@tcp(localhost:3306)/auth?parseTime=true&multiStatements=true" go test ./... -p 1 -race -v -count=1
+	GOTRUE_DB_DRIVER=mysql DATABASE_URL="mysql://supabase_auth_admin:root@127.0.0.1:3306/auth?parseTime=true&multiStatements=true" go test ./... -p 1 -race -v -count=1
 
 test_tidb: auth ## Run tests against TiDB.
-	GOTRUE_DB_DRIVER=tidb DATABASE_URL="mysql://root:@tcp(localhost:4000)/auth?parseTime=true&multiStatements=true" go test ./... -p 1 -race -v -count=1
+	GOTRUE_DB_DRIVER=tidb DATABASE_URL="mysql://root:@127.0.0.1:4000/auth?parseTime=true&multiStatements=true" go test ./... -p 1 -race -v -count=1
 
 test: auth ## Run tests.
 	go test -failfast $(CHECK_FILES) -coverprofile=coverage.out -coverpkg ./... -p 1 -race -v -count=1

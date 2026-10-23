@@ -1,7 +1,5 @@
-{{ if index .Options "Namespace" }}
-CREATE DATABASE IF NOT EXISTS `{{ index .Options "Namespace" }}`;
-USE `{{ index .Options "Namespace" }}`;
-{{ end }}
+SET FOREIGN_KEY_CHECKS = 0;
+
 
 -- instances definition
 CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`instances` (
@@ -476,3 +474,5 @@ CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options
     KEY `scim_tokens_token_hash_idx` (`token_hash`),
     CONSTRAINT `scim_tokens_sso_provider_id_fkey` FOREIGN KEY (`sso_provider_id`) REFERENCES {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`sso_providers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;

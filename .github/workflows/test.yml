@@ -58,7 +58,7 @@ jobs:
       - name: Run tests
         env:
           GOTRUE_DB_DRIVER: tidb
-          DATABASE_URL: "mysql://root:@tcp(127.0.0.1:4000)/auth?parseTime=true&multiStatements=true"
+          DATABASE_URL: "mysql://root:@127.0.0.1:4000/auth?parseTime=true&multiStatements=true"
         run: |
           go test ./internal/storage ./internal/models -v -p 1 -count=1
 
@@ -97,7 +97,7 @@ jobs:
       - name: Run tests
         env:
           GOTRUE_DB_DRIVER: mysql
-          DATABASE_URL: "mysql://supabase_auth_admin:root@tcp(127.0.0.1:3306)/auth?parseTime=true&multiStatements=true"
+          DATABASE_URL: "mysql://supabase_auth_admin:root@127.0.0.1:3306/auth?parseTime=true&multiStatements=true"
         run: |
           go test ./internal/storage ./internal/models -v -p 1 -count=1
 

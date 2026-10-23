@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/XSAM/otelsql"
@@ -72,9 +73,24 @@ func (c *Connection) Copy() *Connection {
 	return &cpy
 }
 
+func cleanDBURL(rawURL string) string {
+	if strings.Contains(rawURL, "@tcp(") {
+		idx := strings.Index(rawURL, "@tcp(")
+		if idx != -1 {
+			afterAt := rawURL[idx+5:]
+			closeParen := strings.Index(afterAt, ")")
+			if closeParen != -1 {
+				rawURL = rawURL[:idx+1] + afterAt[:closeParen] + afterAt[closeParen+1:]
+			}
+		}
+	}
+	return rawURL
+}
+
 func newConnectionDetails(
 	config *conf.GlobalConfiguration,
 ) (*pop.ConnectionDetails, error) {
+	config.DB.URL = cleanDBURL(config.DB.URL)
 	cd := &pop.ConnectionDetails{
 		Dialect:         config.DB.Driver,
 		URL:             config.DB.URL,
@@ -103,6 +119,8 @@ func applyDBDriver(
 	config *conf.GlobalConfiguration,
 	cd *pop.ConnectionDetails,
 ) error {
+	config.DB.URL = cleanDBURL(config.DB.URL)
+	cd.URL = cleanDBURL(cd.URL)
 	if config.DB.Driver == "" && config.DB.URL != "" {
 		u, err := url.Parse(config.DB.URL)
 		if err != nil {
@@ -132,6 +150,17 @@ func applyDBDriver(
 		}
 		if _, ok := cd.Options["sql_mode"]; !ok {
 			cd.Options["sql_mode"] = "ANSI_QUOTES"
+		}
+		if u, err := url.Parse(cd.URL); err == nil {
+			q := u.Query()
+			if q.Get("parseTime") == "" {
+				q.Set("parseTime", "true")
+			}
+			if q.Get("multiStatements") == "" {
+				q.Set("multiStatements", "true")
+			}
+			u.RawQuery = q.Encode()
+			cd.URL = u.String()
 		}
 	default:
 		logrus.Warnf("driver %q: defaulting driver to %q", config.DB.Driver, config.DB.Driver)
