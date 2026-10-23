@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -243,6 +244,10 @@ func signupAndConfirmEmail(
 }
 
 func TestE2EHooks(t *testing.T) {
+	if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver != "" && driver != "postgres" {
+		t.Skip("skipping e2ehooks tests on non-postgres driver")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 

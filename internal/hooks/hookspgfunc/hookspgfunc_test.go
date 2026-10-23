@@ -3,6 +3,7 @@ package hookspgfunc
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -18,13 +19,14 @@ import (
 type M = map[string]any
 
 func TestDispatch(t *testing.T) {
+	if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver != "" && driver != "postgres" {
+		t.Skip("skipping pgfunc tests on non-postgres driver")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	globalCfg := e2e.Must(e2e.Config())
-	if globalCfg.DB.Driver != "postgres" {
-		t.Skip("skipping pgfunc tests on non-postgres driver")
-	}
 	db := e2e.Must(e2e.Conn(globalCfg))
 
 	type testCase struct {

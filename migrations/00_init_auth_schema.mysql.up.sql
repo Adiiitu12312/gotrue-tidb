@@ -39,7 +39,14 @@ CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options
     `phone_change` VARCHAR(255) NULL,
     `phone_change_token` VARCHAR(255) NULL,
     `phone_change_sent_at` DATETIME(6) NULL,
-    `confirmed_at` DATETIME(6) NULL,
+    `confirmed_at` DATETIME(6) GENERATED ALWAYS AS (
+        CASE 
+            WHEN `email_confirmed_at` IS NULL THEN `phone_confirmed_at`
+            WHEN `phone_confirmed_at` IS NULL THEN `email_confirmed_at`
+            WHEN `email_confirmed_at` < `phone_confirmed_at` THEN `email_confirmed_at`
+            ELSE `phone_confirmed_at`
+        END
+    ) STORED,
     `email_change_token_current` VARCHAR(255) NULL,
     `email_change_confirm_status` SMALLINT DEFAULT 0,
     `banned_until` DATETIME(6) NULL,

@@ -185,6 +185,24 @@ func (u *User) BeforeSave(tx *pop.Connection) error {
 	return nil
 }
 
+// AfterFind is invoked after the user is retrieved from the database
+func (u *User) AfterFind(tx *pop.Connection) error {
+	if u.ConfirmedAt == nil {
+		if u.EmailConfirmedAt != nil && u.PhoneConfirmedAt != nil {
+			if u.EmailConfirmedAt.Before(*u.PhoneConfirmedAt) {
+				u.ConfirmedAt = u.EmailConfirmedAt
+			} else {
+				u.ConfirmedAt = u.PhoneConfirmedAt
+			}
+		} else if u.EmailConfirmedAt != nil {
+			u.ConfirmedAt = u.EmailConfirmedAt
+		} else if u.PhoneConfirmedAt != nil {
+			u.ConfirmedAt = u.PhoneConfirmedAt
+		}
+	}
+	return nil
+}
+
 // IsConfirmed checks if a user has already been
 // registered and confirmed.
 func (u *User) IsConfirmed() bool {
@@ -341,6 +359,9 @@ func (u *User) UpdateUserEmailFromIdentities(tx *storage.Connection, mailerAutoc
 		// the promoted email was neither verified by the IdP nor covered by
 		// the project's autoconfirm policy, so it can't remain confirmed
 		u.EmailConfirmedAt = nil
+		if u.PhoneConfirmedAt == nil {
+			u.ConfirmedAt = nil
+		}
 		if terr := tx.UpdateOnly(u, "email_confirmed_at"); terr != nil {
 			return terr
 		}
@@ -524,6 +545,9 @@ func (u *User) Confirm(tx *storage.Connection) error {
 	u.ConfirmationToken = ""
 	now := time.Now()
 	u.EmailConfirmedAt = &now
+	if u.ConfirmedAt == nil {
+		u.ConfirmedAt = &now
+	}
 
 	if err := tx.UpdateOnly(u, "confirmation_token", "email_confirmed_at"); err != nil {
 		return err
@@ -547,6 +571,9 @@ func (u *User) ConfirmPhone(tx *storage.Connection) error {
 	u.ConfirmationToken = ""
 	now := time.Now()
 	u.PhoneConfirmedAt = &now
+	if u.ConfirmedAt == nil {
+		u.ConfirmedAt = &now
+	}
 	if err := tx.UpdateOnly(u, "confirmation_token", "phone_confirmed_at"); err != nil {
 		return err
 	}
@@ -618,6 +645,9 @@ func (u *User) ConfirmPhoneChange(tx *storage.Connection) error {
 	u.PhoneChange = ""
 	u.PhoneChangeToken = ""
 	u.PhoneConfirmedAt = &now
+	if u.ConfirmedAt == nil {
+		u.ConfirmedAt = &now
+	}
 
 	if err := tx.UpdateOnly(
 		u,

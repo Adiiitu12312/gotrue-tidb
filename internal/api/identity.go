@@ -69,6 +69,9 @@ func (a *API) DeleteIdentity(w http.ResponseWriter, r *http.Request) error {
 		switch identityToBeDeleted.Provider {
 		case PhoneProvider:
 			user.PhoneConfirmedAt = nil
+			if user.EmailConfirmedAt == nil {
+				user.ConfirmedAt = nil
+			}
 			if terr := user.SetPhone(tx, ""); terr != nil {
 				return apierrors.NewInternalServerError("Database error updating user phone").WithInternalError(terr)
 			}

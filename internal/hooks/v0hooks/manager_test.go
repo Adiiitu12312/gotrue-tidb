@@ -3,6 +3,7 @@ package v0hooks
 import (
 	"context"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -22,13 +23,14 @@ var testUUID = uuid.Must(uuid.FromString(
 	"00000000-0000-0000-0000-000000000000"))
 
 func TestHooks(t *testing.T) {
+	if driver := os.Getenv("GOTRUE_DB_DRIVER"); driver != "" && driver != "postgres" {
+		t.Skip("skipping v0hooks tests on non-postgres driver")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	globalCfg := e2e.Must(e2e.Config())
-	if globalCfg.DB.Driver != "postgres" {
-		t.Skip("skipping v0hooks tests on non-postgres driver")
-	}
 	db := e2e.Must(e2e.Conn(globalCfg))
 	httpDr := hookshttp.New(hookshttp.WithTimeout(time.Second / 10))
 	pgfuncDr := hookspgfunc.New(db, hookspgfunc.WithTimeout(time.Second/10))
