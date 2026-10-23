@@ -51,6 +51,21 @@ func cleanDBURL(rawURL string) string {
 	return rawURL
 }
 
+func formatMySQLURLForPop(rawURL string) string {
+	if !strings.Contains(rawURL, "@tcp(") && strings.Contains(rawURL, "@") {
+		atIdx := strings.Index(rawURL, "@")
+		slashIdx := strings.Index(rawURL[atIdx:], "/")
+		if slashIdx != -1 {
+			hostPort := rawURL[atIdx+1 : atIdx+slashIdx]
+			rawURL = rawURL[:atIdx+1] + "tcp(" + hostPort + ")" + rawURL[atIdx+slashIdx:]
+		}
+	}
+	if !strings.HasPrefix(rawURL, "mysql://") {
+		rawURL = "mysql://" + rawURL
+	}
+	return rawURL
+}
+
 func migrate(cmd *cobra.Command, args []string) {
 	globalConfig := loadGlobalConfig(cmd.Context())
 	globalConfig.DB.URL = cleanDBURL(globalConfig.DB.URL)
@@ -101,9 +116,14 @@ func migrate(cmd *cobra.Command, args []string) {
 	}
 	u.RawQuery = q.Encode()
 
+	deetsURL := u.String()
+	if dialect == "mysql" {
+		deetsURL = formatMySQLURLForPop(deetsURL)
+	}
+
 	deets := &pop.ConnectionDetails{
 		Dialect: dialect,
-		URL:     u.String(),
+		URL:     deetsURL,
 	}
 	deets.Options = map[string]string{
 		"migration_table_name": "schema_migrations",

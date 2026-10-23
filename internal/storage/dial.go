@@ -87,6 +87,21 @@ func cleanDBURL(rawURL string) string {
 	return rawURL
 }
 
+func formatMySQLURLForPop(rawURL string) string {
+	if !strings.Contains(rawURL, "@tcp(") && strings.Contains(rawURL, "@") {
+		atIdx := strings.Index(rawURL, "@")
+		slashIdx := strings.Index(rawURL[atIdx:], "/")
+		if slashIdx != -1 {
+			hostPort := rawURL[atIdx+1 : atIdx+slashIdx]
+			rawURL = rawURL[:atIdx+1] + "tcp(" + hostPort + ")" + rawURL[atIdx+slashIdx:]
+		}
+	}
+	if !strings.HasPrefix(rawURL, "mysql://") {
+		rawURL = "mysql://" + rawURL
+	}
+	return rawURL
+}
+
 func newConnectionDetails(
 	config *conf.GlobalConfiguration,
 ) (*pop.ConnectionDetails, error) {
@@ -162,6 +177,7 @@ func applyDBDriver(
 			u.RawQuery = q.Encode()
 			cd.URL = u.String()
 		}
+		cd.URL = formatMySQLURLForPop(cd.URL)
 	default:
 		logrus.Warnf("driver %q: defaulting driver to %q", config.DB.Driver, config.DB.Driver)
 		driver = config.DB.Driver
