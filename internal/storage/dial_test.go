@@ -113,6 +113,9 @@ func TestPopConnToStd(t *testing.T) {
 }
 
 func TestConnection(t *testing.T) {
+	if os.Getenv("GOTRUE_DB_DRIVER") == "mysql" || os.Getenv("GOTRUE_DB_DRIVER") == "tidb" {
+		t.Skip("skipping postgres-specific config equality tests on mysql/tidb")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -151,6 +154,9 @@ func TestConnection(t *testing.T) {
 }
 
 func TestConnLimits(t *testing.T) {
+	if os.Getenv("GOTRUE_DB_DRIVER") == "mysql" || os.Getenv("GOTRUE_DB_DRIVER") == "tidb" {
+		t.Skip("skipping postgres-specific connection limit tests on mysql/tidb")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
