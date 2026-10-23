@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -343,6 +344,10 @@ func TestFindOAuthServerAuthorizationByIDForUpdate_SkipLocked(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 	require.NoError(t, TruncateAll(db))
+
+	if os.Getenv("GOTRUE_DB_DRIVER") == "tidb" || globalConfig.DB.Driver == "tidb" {
+		t.Skip("skipping SKIP LOCKED test on TiDB (TiDB does not support SKIP LOCKED)")
+	}
 
 	clientName := "Skip Locked Test Client"
 	secretHash, err := testHashClientSecret("test_secret")

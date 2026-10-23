@@ -56,25 +56,6 @@ CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options
     KEY `users_is_anonymous_idx` (`is_anonymous`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- refresh_tokens definition
-CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`refresh_tokens` (
-    `instance_id` VARCHAR(36) NULL,
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `token` VARCHAR(255) NULL,
-    `user_id` VARCHAR(255) NULL,
-    `revoked` TINYINT(1) NULL,
-    `created_at` DATETIME(6) NULL,
-    `updated_at` DATETIME(6) NULL,
-    `parent` VARCHAR(255) NULL,
-    `session_id` VARCHAR(36) NULL,
-    PRIMARY KEY (`id`),
-    KEY `refresh_tokens_instance_id_idx` (`instance_id`),
-    KEY `refresh_tokens_instance_id_user_id_idx` (`instance_id`, `user_id`),
-    KEY `refresh_tokens_token_idx` (`token`),
-    KEY `refresh_tokens_session_id_revoked_idx` (`session_id`, `revoked`),
-    KEY `refresh_tokens_updated_at_idx` (`updated_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- audit_log_entries definition
 CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`audit_log_entries` (
     `instance_id` VARCHAR(36) NULL,
@@ -146,6 +127,26 @@ CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options
     KEY `sessions_user_id_created_at_idx` (`user_id`, `created_at`),
     KEY `sessions_oauth_client_id_idx` (`oauth_client_id`),
     CONSTRAINT `sessions_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- refresh_tokens definition
+CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`refresh_tokens` (
+    `instance_id` VARCHAR(36) NULL,
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `token` VARCHAR(255) NULL,
+    `user_id` VARCHAR(255) NULL,
+    `revoked` TINYINT(1) NULL,
+    `created_at` DATETIME(6) NULL,
+    `updated_at` DATETIME(6) NULL,
+    `parent` VARCHAR(255) NULL,
+    `session_id` VARCHAR(36) NULL,
+    PRIMARY KEY (`id`),
+    KEY `refresh_tokens_instance_id_idx` (`instance_id`),
+    KEY `refresh_tokens_instance_id_user_id_idx` (`instance_id`, `user_id`),
+    KEY `refresh_tokens_token_idx` (`token`),
+    KEY `refresh_tokens_session_id_revoked_idx` (`session_id`, `revoked`),
+    KEY `refresh_tokens_updated_at_idx` (`updated_at`),
+    CONSTRAINT `refresh_tokens_session_id_fkey` FOREIGN KEY (`session_id`) REFERENCES {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`sessions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- mfa_factors definition
@@ -221,6 +222,8 @@ CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options
     PRIMARY KEY (`id`),
     UNIQUE KEY `saml_providers_entity_id_key` (`entity_id`),
     KEY `saml_providers_sso_provider_id_idx` (`sso_provider_id`),
+    CONSTRAINT `saml_providers_entity_id_not_empty` CHECK (CHAR_LENGTH(`entity_id`) > 0),
+    CONSTRAINT `saml_providers_metadata_xml_not_empty` CHECK (CHAR_LENGTH(`metadata_xml`) > 0),
     CONSTRAINT `saml_providers_sso_provider_id_fkey` FOREIGN KEY (`sso_provider_id`) REFERENCES {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`sso_providers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -250,7 +253,8 @@ CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options
     `updated_at` DATETIME(6) NULL,
     PRIMARY KEY (`id`),
     KEY `sso_domains_sso_provider_id_idx` (`sso_provider_id`),
-    KEY `sso_domains_domain_idx` (`domain`),
+    UNIQUE KEY `sso_domains_domain_idx` (`domain`),
+    CONSTRAINT `sso_domains_domain_not_empty` CHECK (CHAR_LENGTH(`domain`) > 0),
     CONSTRAINT `sso_domains_sso_provider_id_fkey` FOREIGN KEY (`sso_provider_id`) REFERENCES {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`sso_providers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -407,10 +411,12 @@ CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options
 CREATE TABLE IF NOT EXISTS {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`webauthn_challenges` (
     `id` VARCHAR(36) NOT NULL,
     `user_id` VARCHAR(36) NULL,
+    `challenge_type` VARCHAR(255) NOT NULL,
     `session_data` JSON NOT NULL,
     `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     `expires_at` DATETIME(6) NOT NULL,
     PRIMARY KEY (`id`),
+    KEY `webauthn_challenges_user_id_idx` (`user_id`),
     KEY `webauthn_challenges_expires_at_idx` (`expires_at`),
     CONSTRAINT `webauthn_challenges_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES {{ if index .Options "Namespace" }}`{{ index .Options "Namespace" }}`.{{ end }}`users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

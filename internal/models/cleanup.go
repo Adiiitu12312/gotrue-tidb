@@ -50,7 +50,7 @@ func NewCleanup(config *conf.GlobalConfiguration) *Cleanup {
 	if isMySQL {
 		c.cleanupStatements = append(c.cleanupStatements,
 			fmt.Sprintf("DELETE FROM %s WHERE revoked = 1 AND updated_at < DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 100;", tableRefreshTokens),
-			fmt.Sprintf("UPDATE %s rt JOIN %s s ON rt.session_id = s.id SET rt.revoked = 1, rt.updated_at = NOW() WHERE s.not_after < DATE_SUB(NOW(), INTERVAL 24 HOUR) AND rt.revoked = 0 LIMIT 100;", tableRefreshTokens, tableSessions),
+			fmt.Sprintf("UPDATE %s rt JOIN %s s ON rt.session_id = s.id SET rt.revoked = 1, rt.updated_at = NOW() WHERE s.not_after < DATE_SUB(NOW(), INTERVAL 24 HOUR) AND rt.revoked = 0;", tableRefreshTokens, tableSessions),
 			fmt.Sprintf("DELETE FROM %s WHERE not_after < DATE_SUB(NOW(), INTERVAL 72 HOUR) LIMIT 10;", tableSessions),
 			fmt.Sprintf("DELETE FROM %s WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 100;", tableRelayStates),
 			fmt.Sprintf("DELETE FROM %s WHERE created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 100;", tableFlowStates),
@@ -74,7 +74,7 @@ func NewCleanup(config *conf.GlobalConfiguration) *Cleanup {
 		if config.Sessions.InactivityTimeout != nil {
 			inactivitySeconds := int((*config.Sessions.InactivityTimeout).Seconds())
 			c.cleanupStatements = append(c.cleanupStatements, fmt.Sprintf("DELETE FROM %s WHERE refreshed_at IS NOT NULL AND DATE_ADD(refreshed_at, INTERVAL %d SECOND) < DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 100;", tableSessions, inactivitySeconds))
-			c.cleanupStatements = append(c.cleanupStatements, fmt.Sprintf("DELETE s FROM %s s JOIN %s rt ON rt.session_id = s.id WHERE s.refreshed_at IS NULL AND rt.revoked = 0 AND DATE_ADD(rt.updated_at, INTERVAL %d SECOND) < DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 100;", tableSessions, tableRefreshTokens, inactivitySeconds))
+			c.cleanupStatements = append(c.cleanupStatements, fmt.Sprintf("DELETE s FROM %s s JOIN %s rt ON rt.session_id = s.id WHERE s.refreshed_at IS NULL AND rt.revoked = 0 AND DATE_ADD(rt.updated_at, INTERVAL %d SECOND) < DATE_SUB(NOW(), INTERVAL 24 HOUR);", tableSessions, tableRefreshTokens, inactivitySeconds))
 		}
 	} else {
 		// These statements intentionally use SELECT ... FOR UPDATE SKIP LOCKED

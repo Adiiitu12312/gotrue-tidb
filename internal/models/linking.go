@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/supabase/auth/internal/api/provider"
@@ -120,14 +121,23 @@ func DetermineAccountLinking(tx *storage.Connection, config *conf.GlobalConfigur
 	var similarUsers []*User
 
 	// look for similar identities and users based on email
-	if terr := tx.Q().Eager().Where("email = any (?)", verifiedEmails).All(&similarIdentities); terr != nil {
+	placeholders := make([]string, len(verifiedEmails))
+	args := make([]any, len(verifiedEmails))
+	for i, email := range verifiedEmails {
+		placeholders[i] = "?"
+		args[i] = email
+	}
+	inClause := fmt.Sprintf("email IN (%s)", strings.Join(placeholders, ", "))
+
+	if terr := tx.Q().Eager().Where(inClause, args...).All(&similarIdentities); terr != nil {
 		return AccountLinkingResult{}, terr
 	}
 
 	if candidateLinkingDomain == "default" {
 		// there can be multiple user accounts with the same email when is_sso_user is true
 		// so we just do not consider those similar user accounts
-		if terr := tx.Q().Eager().Where("email = any (?) and is_sso_user = false", verifiedEmails).All(&similarUsers); terr != nil {
+		userArgs := append(args, false)
+		if terr := tx.Q().Eager().Where(fmt.Sprintf("%s and is_sso_user = ?", inClause), userArgs...).All(&similarUsers); terr != nil {
 			return AccountLinkingResult{}, terr
 		}
 	}

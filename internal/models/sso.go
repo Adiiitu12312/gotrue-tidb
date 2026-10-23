@@ -10,6 +10,7 @@ import (
 
 	"github.com/crewjam/saml"
 	"github.com/crewjam/saml/samlsp"
+	"github.com/gobuffalo/pop/v6"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
 	"github.com/supabase/auth/internal/storage"
@@ -141,6 +142,16 @@ func (p SAMLProvider) TableName() string {
 	return "saml_providers"
 }
 
+func (p *SAMLProvider) BeforeCreate(tx *pop.Connection) error {
+	if len(p.EntityID) == 0 {
+		return errors.New("entity_id not empty check failed")
+	}
+	if len(p.MetadataXML) == 0 {
+		return errors.New("metadata_xml not empty check failed")
+	}
+	return nil
+}
+
 func (p SAMLProvider) EntityDescriptor() (*saml.EntityDescriptor, error) {
 	return samlsp.ParseMetadata([]byte(p.MetadataXML))
 }
@@ -159,6 +170,13 @@ type SSODomain struct {
 
 func (d SSODomain) TableName() string {
 	return "sso_domains"
+}
+
+func (d *SSODomain) BeforeCreate(tx *pop.Connection) error {
+	if len(d.Domain) == 0 {
+		return errors.New("domain not empty check failed")
+	}
+	return nil
 }
 
 type SAMLRelayState struct {

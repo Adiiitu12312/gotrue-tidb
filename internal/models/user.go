@@ -833,8 +833,12 @@ func FindUsersInAudience(tx *storage.Connection, aud string, pageParams *Paginat
 
 	if filter != "" {
 		lf := "%" + filter + "%"
-		// we must specify the collation in order to get case insensitive search for the JSON column
-		q = q.Where("(email LIKE ? OR raw_user_meta_data->>'full_name' ILIKE ?)", lf, lf)
+		if tx.IsMySQL() {
+			q = q.Where("(email LIKE ? OR LOWER(raw_user_meta_data->>'$.full_name') LIKE LOWER(?))", lf, lf)
+		} else {
+			// we must specify the collation in order to get case insensitive search for the JSON column
+			q = q.Where("(email LIKE ? OR raw_user_meta_data->>'full_name' ILIKE ?)", lf, lf)
+		}
 	}
 
 	if sortParams != nil && len(sortParams.Fields) > 0 {
@@ -869,8 +873,12 @@ func FindUsersInAudienceKeyset(tx *storage.Connection, aud string, p *KeysetPagi
 
 	if filter != "" {
 		lf := "%" + filter + "%"
-		// we must specify the collation in order to get case insensitive search for the JSON column
-		q = q.Where("(email LIKE ? OR raw_user_meta_data->>'full_name' ILIKE ?)", lf, lf)
+		if tx.IsMySQL() {
+			q = q.Where("(email LIKE ? OR LOWER(raw_user_meta_data->>'$.full_name') LIKE LOWER(?))", lf, lf)
+		} else {
+			// we must specify the collation in order to get case insensitive search for the JSON column
+			q = q.Where("(email LIKE ? OR raw_user_meta_data->>'full_name' ILIKE ?)", lf, lf)
+		}
 	}
 
 	dir := Descending
