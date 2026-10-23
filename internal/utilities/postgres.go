@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 )
@@ -19,8 +20,12 @@ type PostgresError struct {
 }
 
 // NewPostgresError returns a new PostgresError if the error was from a publicly
-// accessible Postgres error.
+// accessible Postgres or MySQL/TiDB error.
 func NewPostgresError(err error) *PostgresError {
+	if err == nil {
+		return nil
+	}
+
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && isPubliclyAccessiblePostgresError(pgErr.Code) {
 		return &PostgresError{
@@ -29,6 +34,35 @@ func NewPostgresError(err error) *PostgresError {
 			Message:        pgErr.Message,
 			Detail:         pgErr.Detail,
 			Hint:           pgErr.Hint,
+		}
+	}
+
+	var myErr *mysql.MySQLError
+	if errors.As(err, &myErr) {
+		code := ""
+		switch myErr.Number {
+		case 1062: // Duplicate entry
+			code = pgerrcode.UniqueViolation // 23505
+		case 1451, 1452: // Foreign key violation
+			code = pgerrcode.ForeignKeyViolation // 23503
+		case 1048: // Not null violation
+			code = pgerrcode.NotNullViolation // 23502
+		default:
+			code = pgerrcode.IntegrityConstraintViolation // 23000
+		}
+		return &PostgresError{
+			Code:           code,
+			HttpStatusCode: getHttpStatusCodeFromPostgresErrorCode(code),
+			Message:        myErr.Message,
+		}
+	}
+
+	errStr := err.Error()
+	if strings.Contains(errStr, "Duplicate entry") || strings.Contains(errStr, "Error 1062") {
+		return &PostgresError{
+			Code:           pgerrcode.UniqueViolation,
+			HttpStatusCode: 500,
+			Message:        errStr,
 		}
 	}
 

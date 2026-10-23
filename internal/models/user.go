@@ -686,7 +686,7 @@ func CountOtherUsers(tx *storage.Connection, id uuid.UUID) (int, error) {
 func findUser(tx *storage.Connection, query string, args ...interface{}) (*User, error) {
 	obj := &User{}
 	if err := tx.Eager().Q().Where(query, args...).First(obj); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, UserNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding user")
@@ -781,8 +781,8 @@ func findUserWithLegacyRefreshToken(tx *storage.Connection, token string, forUpd
 		// queries which lock the rows affected by the query from
 		// being accessed by any other transaction that also uses FOR
 		// UPDATE
-		if err := tx.RawQuery(fmt.Sprintf("SELECT * FROM %q WHERE token = ? LIMIT 1 %s;", refreshToken.TableName(), tx.ForUpdateClause()), token).First(refreshToken); err != nil {
-			if errors.Cause(err) == sql.ErrNoRows {
+		if err := tx.RawQuery(fmt.Sprintf("SELECT * FROM %s WHERE token = ? LIMIT 1 %s;", tx.TableQuote(refreshToken.TableName()), tx.ForUpdateClause()), token).First(refreshToken); err != nil {
+			if IsNoRowsError(err) {
 				return nil, nil, nil, RefreshTokenNotFoundError{}
 			}
 
@@ -792,7 +792,7 @@ func findUserWithLegacyRefreshToken(tx *storage.Connection, token string, forUpd
 
 	// once the rows are locked (if forUpdate was true), we can query again using pop
 	if err := tx.Where("token = ?", token).First(refreshToken); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, nil, nil, RefreshTokenNotFoundError{}
 		}
 		return nil, nil, nil, errors.Wrap(err, "error finding refresh token")
@@ -928,7 +928,7 @@ func IsDuplicatedEmail(tx *storage.Connection, email, aud string, currentUser *U
 	var identities []Identity
 
 	if err := tx.Eager().Q().Where("email = ?", strings.ToLower(email)).All(&identities); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, nil
 		}
 
@@ -1150,7 +1150,7 @@ func (u *User) FindOwnedFactorByID(tx *storage.Connection, factorID uuid.UUID) (
 	var factor Factor
 	err := tx.Where("user_id = ? AND id = ?", u.ID, factorID).First(&factor)
 	if err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, &FactorNotFoundError{}
 		}
 		return nil, err

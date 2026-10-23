@@ -223,7 +223,7 @@ func (e InvalidRedirectURIError) Error() string {
 func FindOAuthServerClientByID(tx *storage.Connection, id uuid.UUID) (*OAuthServerClient, error) {
 	client := &OAuthServerClient{}
 	if err := tx.Q().Where("id = ? AND deleted_at IS NULL", id).First(client); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, OAuthServerClientNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding OAuth client")

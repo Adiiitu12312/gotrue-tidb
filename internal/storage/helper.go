@@ -12,11 +12,14 @@ func (s *NullString) Scan(value interface{}) error {
 		*s = ""
 		return nil
 	}
-	strVal, ok := value.(string)
-	if !ok {
+	switch v := value.(type) {
+	case string:
+		*s = NullString(v)
+	case []byte:
+		*s = NullString(v)
+	default:
 		return errors.New("column is not a string")
 	}
-	*s = NullString(strVal)
 	return nil
 }
 func (s NullString) Value() (driver.Value, error) {

@@ -33,7 +33,7 @@ func FindAndDeleteOAuthClientStateByID(tx *storage.Connection, id uuid.UUID) (*O
 	obj := &OAuthClientState{}
 	if tx.IsMySQL() {
 		if err := tx.RawQuery("SELECT * FROM "+obj.TableName()+" WHERE id = ?", id).First(obj); err != nil {
-			if errors.Cause(err) == sql.ErrNoRows {
+			if IsNoRowsError(err) {
 				return nil, OAuthClientStateNotFoundError{}
 			}
 			return nil, errors.Wrap(err, "error finding oauth state")
@@ -44,7 +44,7 @@ func FindAndDeleteOAuthClientStateByID(tx *storage.Connection, id uuid.UUID) (*O
 		return obj, nil
 	}
 	if err := tx.RawQuery("DELETE FROM "+obj.TableName()+" WHERE id = ? RETURNING *", id).First(obj); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, OAuthClientStateNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error deleting oauth state")

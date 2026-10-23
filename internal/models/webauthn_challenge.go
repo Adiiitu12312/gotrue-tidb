@@ -43,7 +43,7 @@ func NewWebAuthnChallenge(userID *uuid.UUID, challengeType string, sessionData *
 func FindWebAuthnChallengeByID(conn *storage.Connection, id uuid.UUID) (*WebAuthnChallenge, error) {
 	var challenge WebAuthnChallenge
 	err := conn.Find(&challenge, id)
-	if err != nil && errors.Cause(err) == sql.ErrNoRows {
+	if err != nil && IsNoRowsError(err) {
 		return nil, WebAuthnChallengeNotFoundError{}
 	} else if err != nil {
 		return nil, err
@@ -56,6 +56,28 @@ func ConsumeWebAuthnChallengeByID(conn *storage.Connection, id uuid.UUID, challe
 	challenge := &WebAuthnChallenge{}
 	table := challenge.TableName()
 
+	if conn.IsMySQL() {
+		var selQuery string
+		var args []any
+		if userID != nil {
+			selQuery = "SELECT * FROM " + table + " WHERE id = ? AND challenge_type = ? AND user_id = ?"
+			args = []any{id, challengeType, *userID}
+		} else {
+			selQuery = "SELECT * FROM " + table + " WHERE id = ? AND challenge_type = ? AND user_id IS NULL"
+			args = []any{id, challengeType}
+		}
+		if err := conn.RawQuery(selQuery, args...).First(challenge); err != nil {
+			if IsNoRowsError(err) {
+				return nil, WebAuthnChallengeNotFoundError{}
+			}
+			return nil, err
+		}
+		if err := conn.RawQuery("DELETE FROM "+table+" WHERE id = ?", id).Exec(); err != nil {
+			return nil, err
+		}
+		return challenge, nil
+	}
+
 	var query string
 	var args []any
 	if userID != nil {
@@ -67,7 +89,7 @@ func ConsumeWebAuthnChallengeByID(conn *storage.Connection, id uuid.UUID, challe
 	}
 
 	if err := conn.RawQuery(query, args...).First(challenge); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, WebAuthnChallengeNotFoundError{}
 		}
 

@@ -103,7 +103,7 @@ func (consent *OAuthServerConsent) Validate() error {
 func FindOAuthServerConsentByUserAndClient(tx *storage.Connection, userID uuid.UUID, clientID uuid.UUID) (*OAuthServerConsent, error) {
 	consent := &OAuthServerConsent{}
 	if err := tx.Eager().Q().Where("user_id = ? AND client_id = ?", userID, clientID).First(consent); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, nil // No consent found (not an error)
 		}
 		return nil, errors.Wrap(err, "error finding OAuth consent")
@@ -115,7 +115,7 @@ func FindOAuthServerConsentByUserAndClient(tx *storage.Connection, userID uuid.U
 func FindActiveOAuthServerConsentByUserAndClient(tx *storage.Connection, userID uuid.UUID, clientID uuid.UUID) (*OAuthServerConsent, error) {
 	consent := &OAuthServerConsent{}
 	if err := tx.Q().Where("user_id = ? AND client_id = ? AND revoked_at IS NULL", userID, clientID).First(consent); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, nil // No active consent found (not an error)
 		}
 		return nil, errors.Wrap(err, "error finding active OAuth consent")

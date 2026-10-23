@@ -279,8 +279,8 @@ func FindSessionByID(tx *storage.Connection, id uuid.UUID, forUpdate bool) (*Ses
 		// queries which lock the rows affected by the query from
 		// being accessed by any other transaction that also uses FOR
 		// UPDATE
-		if err := tx.RawQuery(fmt.Sprintf("SELECT * FROM %q WHERE id = ? LIMIT 1 %s;", session.TableName(), tx.ForUpdateClause()), id).First(session); err != nil {
-			if errors.Cause(err) == sql.ErrNoRows {
+		if err := tx.RawQuery(fmt.Sprintf("SELECT * FROM %s WHERE id = ? LIMIT 1 %s;", tx.TableQuote(session.TableName()), tx.ForUpdateClause()), id).First(session); err != nil {
+			if IsNoRowsError(err) {
 				return nil, SessionNotFoundError{}
 			}
 
@@ -290,7 +290,7 @@ func FindSessionByID(tx *storage.Connection, id uuid.UUID, forUpdate bool) (*Ses
 
 	// once the rows are locked (if forUpdate was true), we can query again using pop
 	if err := tx.Eager().Q().Where("id = ?", id).First(session); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, SessionNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding session")
@@ -301,7 +301,7 @@ func FindSessionByID(tx *storage.Connection, id uuid.UUID, forUpdate bool) (*Ses
 func FindSessionByUserID(tx *storage.Connection, userId uuid.UUID) (*Session, error) {
 	session := &Session{}
 	if err := tx.Eager().Q().Where("user_id = ?", userId).Order("created_at asc").First(session); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, SessionNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding session")
@@ -325,8 +325,8 @@ func FindSessionsByFactorID(tx *storage.Connection, factorID uuid.UUID) ([]*Sess
 func FindAllSessionsForUser(tx *storage.Connection, userId uuid.UUID, forUpdate bool) ([]*Session, error) {
 	if forUpdate {
 		user := &User{}
-		if err := tx.RawQuery(fmt.Sprintf("SELECT id FROM %q WHERE id = ? LIMIT 1 %s;", user.TableName(), tx.ForUpdateClause()), userId).First(user); err != nil {
-			if errors.Cause(err) == sql.ErrNoRows {
+		if err := tx.RawQuery(fmt.Sprintf("SELECT id FROM %s WHERE id = ? LIMIT 1 %s;", tx.TableQuote(user.TableName()), tx.ForUpdateClause()), userId).First(user); err != nil {
+			if IsNoRowsError(err) {
 				return nil, UserNotFoundError{}
 			}
 
@@ -336,7 +336,7 @@ func FindAllSessionsForUser(tx *storage.Connection, userId uuid.UUID, forUpdate 
 
 	var sessions []*Session
 	if err := tx.Where("user_id = ?", userId).All(&sessions); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, nil
 		}
 
@@ -429,7 +429,7 @@ func (s *Session) FindCurrentlyActiveRefreshToken(tx *storage.Connection) (*Refr
 	var activeRefreshToken RefreshToken
 
 	if err := tx.Q().Where("session_id = ? and revoked is false", s.ID).Order("id desc").First(&activeRefreshToken); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows || errors.Is(err, sql.ErrNoRows) {
+		if IsNoRowsError(err) {
 			return nil, RefreshTokenNotFoundError{}
 		}
 

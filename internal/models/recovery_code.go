@@ -79,7 +79,7 @@ func FindRecoveryCodeSetByUser(tx *storage.Connection, userID uuid.UUID) (*Recov
 	set := &RecoveryCodeSet{}
 
 	if err := tx.Q().Where("user_id = ?", userID).First(set); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, RecoveryCodeSetNotFoundError{}
 		}
 
@@ -94,12 +94,12 @@ func FindRecoveryCodeSetByUser(tx *storage.Connection, userID uuid.UUID) (*Recov
 func FindRecoveryCodeSetForUpdate(tx *storage.Connection, userID uuid.UUID) (*RecoveryCodeSet, error) {
 	set := &RecoveryCodeSet{}
 	err := tx.RawQuery(
-		fmt.Sprintf("SELECT * FROM %q WHERE user_id = ? LIMIT 1 FOR UPDATE", set.TableName()),
+		fmt.Sprintf("SELECT * FROM %s WHERE user_id = ? LIMIT 1 FOR UPDATE", tx.TableQuote(set.TableName())),
 		userID,
 	).First(set)
 
 	if err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, RecoveryCodeSetNotFoundError{}
 		}
 
@@ -213,11 +213,11 @@ func ReplaceRecoveryCodes(tx *storage.Connection, mfaRecoveryCodeSetID uuid.UUID
 	// Lock the parent set before updating the recovery codes to serialize concurrent regenerations.
 	set := &RecoveryCodeSet{}
 	err := tx.RawQuery(
-		fmt.Sprintf("SELECT * FROM %q WHERE id = ? LIMIT 1 FOR UPDATE", set.TableName()),
+		fmt.Sprintf("SELECT * FROM %s WHERE id = ? LIMIT 1 FOR UPDATE", tx.TableQuote(set.TableName())),
 		mfaRecoveryCodeSetID,
 	).First(set)
 	if err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return RecoveryCodeSetNotFoundError{}
 		}
 

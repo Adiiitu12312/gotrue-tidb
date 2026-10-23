@@ -208,7 +208,7 @@ func FindCustomOAuthProviderByID(tx *storage.Connection, id uuid.UUID) (*CustomO
 	var provider CustomOAuthProvider
 
 	if err := tx.Q().Where("id = ?", id).First(&provider); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, CustomOAuthProviderNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding custom OAuth provider by ID")
@@ -222,7 +222,7 @@ func FindCustomOAuthProviderByIdentifier(tx *storage.Connection, identifier stri
 	var provider CustomOAuthProvider
 
 	if err := tx.Q().Where("identifier = ?", identifier).First(&provider); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, CustomOAuthProviderNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding custom OAuth provider by identifier")
@@ -236,7 +236,7 @@ func FindAllCustomOAuthProviders(tx *storage.Connection) ([]*CustomOAuthProvider
 	var providers []*CustomOAuthProvider
 
 	if err := tx.Q().Order("created_at desc").All(&providers); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return []*CustomOAuthProvider{}, nil
 		}
 		return nil, errors.Wrap(err, "error finding all custom OAuth providers")
@@ -250,7 +250,7 @@ func FindAllCustomOAuthProvidersByType(tx *storage.Connection, providerType Prov
 	var providers []*CustomOAuthProvider
 
 	if err := tx.Q().Where("provider_type = ?", providerType).Order("provider_type desc").All(&providers); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return []*CustomOAuthProvider{}, nil
 		}
 		return nil, errors.Wrap(err, "error finding custom OAuth providers by type")

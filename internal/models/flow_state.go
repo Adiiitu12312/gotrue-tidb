@@ -147,7 +147,7 @@ func (f *FlowState) IsPKCE() bool {
 func FindFlowStateByAuthCode(tx *storage.Connection, authCode string) (*FlowState, error) {
 	obj := &FlowState{}
 	if err := tx.Eager().Q().Where("auth_code = ?", authCode).First(obj); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, FlowStateNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding flow state")
@@ -159,7 +159,7 @@ func FindFlowStateByAuthCode(tx *storage.Connection, authCode string) (*FlowStat
 func FindFlowStateByID(tx *storage.Connection, id string) (*FlowState, error) {
 	obj := &FlowState{}
 	if err := tx.Eager().Q().Where("id = ?", id).First(obj); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, FlowStateNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding flow state")
@@ -177,10 +177,10 @@ func FindFlowStateByIDForUpdate(tx *storage.Connection, id string) (*FlowState, 
 	// Pop does not provide a way to execute FOR UPDATE queries,
 	// so we use a raw query to lock the row first.
 	if err := tx.RawQuery(
-		fmt.Sprintf("SELECT * FROM %q WHERE id = ? LIMIT 1 %s", obj.TableName(), tx.ForUpdateClause()),
+		fmt.Sprintf("SELECT * FROM %s WHERE id = ? LIMIT 1 %s", tx.TableQuote(obj.TableName()), tx.ForUpdateClause()),
 		id,
 	).First(obj); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, FlowStateNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding flow state")
@@ -191,7 +191,7 @@ func FindFlowStateByIDForUpdate(tx *storage.Connection, id string) (*FlowState, 
 func FindFlowStateByUserID(tx *storage.Connection, id string, authenticationMethod AuthenticationMethod) (*FlowState, error) {
 	obj := &FlowState{}
 	if err := tx.Eager().Q().Where("user_id = ? and authentication_method = ?", id, authenticationMethod).Last(obj); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, FlowStateNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding flow state")

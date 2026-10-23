@@ -78,8 +78,13 @@ func (t OneTimeTokenType) Value() (driver.Value, error) {
 }
 
 func (t *OneTimeTokenType) Scan(src interface{}) error {
-	s, ok := src.(string)
-	if !ok {
+	var s string
+	switch v := src.(type) {
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	default:
 		return fmt.Errorf("OneTimeTokenType: scan type is not string but is %T", src)
 	}
 
@@ -216,7 +221,7 @@ func findOneTimeToken(tx *storage.Connection, tokenHash string, pkceFallback boo
 	}
 
 	if err := query.First(oneTimeToken); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, OneTimeTokenNotFoundError{}
 		}
 
@@ -242,7 +247,7 @@ func FindOneTimeTokenByRelatesTo(tx *storage.Connection, relatesTo string, token
 		Where("token_type = ? and relates_to = ?", tokenType, strings.ToLower(relatesTo)).
 		Order("created_at desc").
 		First(oneTimeToken)
-	if errors.Cause(err) == sql.ErrNoRows {
+	if IsNoRowsError(err) {
 		return nil, OneTimeTokenNotFoundError{}
 	} else if err != nil {
 		return nil, errors.Wrap(err, "error finding one time token")

@@ -85,7 +85,7 @@ func (i *Identity) IsForSSOProvider() bool {
 func FindIdentityByIdAndProvider(tx *storage.Connection, providerId, provider string) (*Identity, error) {
 	identity := &Identity{}
 	if err := tx.Q().Where("provider_id = ? AND provider = ?", providerId, provider).First(identity); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, IdentityNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding identity")
@@ -97,7 +97,7 @@ func FindIdentityByIdAndProvider(tx *storage.Connection, providerId, provider st
 func FindIdentitiesByUserID(tx *storage.Connection, userID uuid.UUID) ([]*Identity, error) {
 	identities := []*Identity{}
 	if err := tx.Q().Where("user_id = ?", userID).All(&identities); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return identities, nil
 		}
 		return nil, errors.Wrap(err, "error finding identities")
@@ -111,7 +111,7 @@ func FindProvidersByUser(tx *storage.Connection, user *User) ([]string, error) {
 	providerExists := map[string]bool{}
 	providers := make([]string, 0)
 	if err := tx.Q().Select("provider").Where("user_id = ?", user.ID).Order("created_at asc").All(&identities); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return providers, nil
 		}
 		return nil, errors.Wrap(err, "error finding providers")

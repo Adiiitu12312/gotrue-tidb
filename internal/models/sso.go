@@ -96,9 +96,14 @@ func (m *SAMLAttributeMapping) Equal(o *SAMLAttributeMapping) bool {
 }
 
 func (m *SAMLAttributeMapping) Scan(src interface{}) error {
-	b, ok := src.([]byte)
-	if !ok {
-		return errors.New("scan source was not []byte")
+	var b []byte
+	switch v := src.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
+		return errors.New("scan source was not []byte or string")
 	}
 	err := json.Unmarshal(b, m)
 	if err != nil {
@@ -180,7 +185,7 @@ func (s SAMLRelayState) TableName() string {
 func FindSAMLProviderByEntityID(tx *storage.Connection, entityId string) (*SSOProvider, error) {
 	var samlProvider SAMLProvider
 	if err := tx.Q().Where("entity_id = ?", entityId).First(&samlProvider); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, SSOProviderNotFoundError{}
 		}
 
@@ -199,7 +204,7 @@ func FindSSOProviderByID(tx *storage.Connection, id uuid.UUID) (*SSOProvider, er
 	var ssoProvider SSOProvider
 
 	if err := tx.Eager().Q().Where("id = ?", id).First(&ssoProvider); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, SSOProviderNotFoundError{}
 		}
 
@@ -212,7 +217,7 @@ func FindSSOProviderByResourceID(tx *storage.Connection, id string) (*SSOProvide
 	var ssoProvider SSOProvider
 
 	if err := tx.Eager().Q().Where("resource_id = ?", id).First(&ssoProvider); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, SSOProviderNotFoundError{}
 		}
 
@@ -233,7 +238,7 @@ func FindSSOProviderByDomain(tx *storage.Connection, domain string) (*SSOProvide
 	var ssoDomain SSODomain
 
 	if err := tx.Q().Where("domain = ?", domain).First(&ssoDomain); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, SSOProviderNotFoundError{}
 		}
 
@@ -242,7 +247,7 @@ func FindSSOProviderByDomain(tx *storage.Connection, domain string) (*SSOProvide
 
 	var ssoProvider SSOProvider
 	if err := tx.Eager().Q().Where("id = ?", ssoDomain.SSOProviderID).First(&ssoProvider); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, SSOProviderNotFoundError{}
 		}
 
@@ -256,10 +261,9 @@ func FindAllSSOProviders(tx *storage.Connection) ([]SSOProvider, error) {
 	var providers []SSOProvider
 
 	if err := tx.Eager().All(&providers); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, nil
 		}
-
 		return nil, errors.Wrap(err, "error loading all SAML SSO providers")
 	}
 
@@ -285,7 +289,7 @@ func FindAllSSOProvidersByFilter(
 		q = q.Where("resource_id LIKE ?", v+"%")
 	}
 	if err := q.All(&ssoProviders); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, nil
 		}
 		return nil, errors.Wrap(err, "error loading all SAML SSO providers")
@@ -297,7 +301,7 @@ func FindSAMLRelayStateByID(tx *storage.Connection, id uuid.UUID) (*SAMLRelaySta
 	var state SAMLRelayState
 
 	if err := tx.Eager().Q().Where("id = ?", id).First(&state); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, SAMLRelayStateNotFoundError{}
 		}
 

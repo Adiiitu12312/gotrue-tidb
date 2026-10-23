@@ -349,7 +349,7 @@ func (f *Factor) UpdateLastWebAuthnChallenge(tx *storage.Connection, challenge *
 func FindFactorByFactorID(conn *storage.Connection, factorID uuid.UUID) (*Factor, error) {
 	var factor Factor
 	err := conn.Find(&factor, factorID)
-	if err != nil && errors.Cause(err) == sql.ErrNoRows {
+	if err != nil && IsNoRowsError(err) {
 		return nil, FactorNotFoundError{}
 	} else if err != nil {
 		return nil, err
@@ -362,7 +362,7 @@ func FindRecoveryCodeFactorByUser(conn *storage.Connection, userID uuid.UUID) (*
 	var factor Factor
 
 	err := conn.Q().Where("user_id = ? AND factor_type = ?", userID, RecoveryCode).First(&factor)
-	if err != nil && errors.Cause(err) == sql.ErrNoRows {
+	if err != nil && IsNoRowsError(err) {
 		return nil, FactorNotFoundError{}
 	} else if err != nil {
 		return nil, err
@@ -482,7 +482,7 @@ func (f *Factor) IsRecoveryCodeFactor() bool {
 func (f *Factor) FindChallengeByID(conn *storage.Connection, challengeID uuid.UUID) (*Challenge, error) {
 	var challenge Challenge
 	err := conn.Q().Where("id = ? and factor_id = ?", challengeID, f.ID).First(&challenge)
-	if err != nil && errors.Cause(err) == sql.ErrNoRows {
+	if err != nil && IsNoRowsError(err) {
 		return nil, ChallengeNotFoundError{}
 	} else if err != nil {
 		return nil, err
@@ -499,12 +499,17 @@ func DeleteFactorsByUserId(tx *storage.Connection, userId uuid.UUID) error {
 
 func DeleteExpiredFactors(tx *storage.Connection, validityDuration time.Duration) error {
 	totalSeconds := int64(validityDuration / time.Second)
-	validityInterval := fmt.Sprintf("interval '%d seconds'", totalSeconds)
-
 	factorTable := (&pop.Model{Value: Factor{}}).TableName()
 	challengeTable := (&pop.Model{Value: Challenge{}}).TableName()
 
-	query := fmt.Sprintf(`delete from %q where status != 'verified' and not exists (select * from %q where %q.id = %q.factor_id ) and created_at + %s < current_timestamp;`, factorTable, challengeTable, factorTable, challengeTable, validityInterval)
+	var query string
+	if tx.IsMySQL() {
+		query = fmt.Sprintf("delete from %s where status != 'verified' and not exists (select * from %s where %s.id = %s.factor_id ) and created_at + interval %d second < current_timestamp;",
+			tx.TableQuote(factorTable), tx.TableQuote(challengeTable), tx.TableQuote(factorTable), tx.TableQuote(challengeTable), totalSeconds)
+	} else {
+		validityInterval := fmt.Sprintf("interval '%d seconds'", totalSeconds)
+		query = fmt.Sprintf(`delete from %q where status != 'verified' and not exists (select * from %q where %q.id = %q.factor_id ) and created_at + %s < current_timestamp;`, factorTable, challengeTable, factorTable, challengeTable, validityInterval)
+	}
 	if err := tx.RawQuery(query).Exec(); err != nil {
 		return err
 	}
@@ -520,7 +525,7 @@ func (f *Factor) FindLatestUnexpiredChallenge(tx *storage.Connection, expiryDura
 		Order("sent_at desc").
 		First(&challenge)
 
-	if err != nil && errors.Cause(err) == sql.ErrNoRows {
+	if err != nil && IsNoRowsError(err) {
 		return nil, ChallengeNotFoundError{}
 	} else if err != nil {
 		return nil, err

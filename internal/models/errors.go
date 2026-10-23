@@ -1,6 +1,12 @@
 package models
 
-import "errors"
+import (
+	"database/sql"
+	"errors"
+	"strings"
+
+	pkgerrors "github.com/pkg/errors"
+)
 
 // sentinel error for all not found errors.
 var errNotFound = errors.New("not found")
@@ -8,9 +14,24 @@ var errNotFound = errors.New("not found")
 // sentinel error for unique constraint violations.
 var errUniqueConstraintViolated = errors.New("unique constraint violated")
 
+// IsNoRowsError checks whether an error indicates no rows were returned from the database.
+func IsNoRowsError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, errNotFound) || pkgerrors.Cause(err) == sql.ErrNoRows {
+		return true
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "no rows in result set") || strings.Contains(errStr, "sql: no rows")
+}
+
 // IsNotFoundError returns whether an error represents a "not found" error.
 func IsNotFoundError(err error) bool {
-	return errors.Is(err, errNotFound)
+	if err == nil {
+		return false
+	}
+	return errors.Is(err, errNotFound) || IsNoRowsError(err)
 }
 
 type SessionNotFoundError struct{}

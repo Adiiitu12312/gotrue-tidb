@@ -127,7 +127,7 @@ func FindWebAuthnCredentialsByUserID(conn *storage.Connection, userID uuid.UUID)
 func FindWebAuthnCredentialByCredentialID(conn *storage.Connection, credentialID []byte) (*WebAuthnCredential, error) {
 	var cred WebAuthnCredential
 	err := conn.Q().Where("credential_id = ?", credentialID).First(&cred)
-	if err != nil && errors.Cause(err) == sql.ErrNoRows {
+	if err != nil && IsNoRowsError(err) {
 		return nil, WebAuthnCredentialNotFoundError{}
 	} else if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func FindWebAuthnCredentialByCredentialID(conn *storage.Connection, credentialID
 func FindWebAuthnCredentialByID(conn *storage.Connection, id uuid.UUID) (*WebAuthnCredential, error) {
 	var cred WebAuthnCredential
 	err := conn.Find(&cred, id)
-	if err != nil && errors.Cause(err) == sql.ErrNoRows {
+	if err != nil && IsNoRowsError(err) {
 		return nil, WebAuthnCredentialNotFoundError{}
 	} else if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func FindWebAuthnCredentialByID(conn *storage.Connection, id uuid.UUID) (*WebAut
 func FindWebAuthnCredentialByIDAndUserID(conn *storage.Connection, id, userID uuid.UUID) (*WebAuthnCredential, error) {
 	var cred WebAuthnCredential
 	err := conn.Q().Where("id = ? AND user_id = ?", id, userID).First(&cred)
-	if err != nil && errors.Cause(err) == sql.ErrNoRows {
+	if err != nil && IsNoRowsError(err) {
 		return nil, WebAuthnCredentialNotFoundError{}
 	} else if err != nil {
 		return nil, err

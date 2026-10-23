@@ -236,7 +236,7 @@ func (auth *OAuthServerAuthorization) VerifyPKCE(codeVerifier string) error {
 func FindOAuthServerAuthorizationByID(tx *storage.Connection, authorizationID string) (*OAuthServerAuthorization, error) {
 	auth := &OAuthServerAuthorization{}
 	if err := tx.Q().Where("authorization_id = ?", authorizationID).First(auth); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, OAuthServerAuthorizationNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding OAuth authorization")
@@ -258,10 +258,10 @@ func FindOAuthServerAuthorizationByID(tx *storage.Connection, authorizationID st
 func FindOAuthServerAuthorizationByIDForUpdate(tx *storage.Connection, authorizationID string) (*OAuthServerAuthorization, error) {
 	auth := &OAuthServerAuthorization{}
 	if err := tx.RawQuery(
-		fmt.Sprintf("SELECT * FROM %q WHERE authorization_id = ? LIMIT 1 %s", auth.TableName(), tx.ForUpdateClause()),
+		fmt.Sprintf("SELECT * FROM %s WHERE authorization_id = ? LIMIT 1 %s", tx.TableQuote(auth.TableName()), tx.ForUpdateClause()),
 		authorizationID,
 	).First(auth); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, OAuthServerAuthorizationNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding OAuth authorization")
@@ -273,7 +273,7 @@ func FindOAuthServerAuthorizationByIDForUpdate(tx *storage.Connection, authoriza
 func FindOAuthServerAuthorizationByCode(tx *storage.Connection, code string) (*OAuthServerAuthorization, error) {
 	auth := &OAuthServerAuthorization{}
 	if err := tx.Q().Where("authorization_code = ? AND status = ?", code, OAuthServerAuthorizationApproved).First(auth); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, OAuthServerAuthorizationNotFoundError{}
 		}
 		return nil, errors.Wrap(err, "error finding OAuth authorization by code")

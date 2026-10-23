@@ -486,12 +486,16 @@ func (c *Connection) IsMySQL() bool {
 }
 
 // ForUpdateClause returns the row-locking clause appropriate for the current dialect.
-// TiDB does not support SKIP LOCKED; Postgres and MySQL 8.0+ do.
 func (c *Connection) ForUpdateClause() string {
-	if c.IsMySQL() {
-		return "FOR UPDATE"
-	}
 	return "FOR UPDATE SKIP LOCKED"
+}
+
+// TableQuote quotes a table name safely according to the database dialect.
+func (c *Connection) TableQuote(name string) string {
+	if c != nil && c.IsMySQL() {
+		return "`" + name + "`"
+	}
+	return `"` + name + `"`
 }
 
 func getExcludedColumns(model interface{}, includeColumns ...string) ([]string, error) {

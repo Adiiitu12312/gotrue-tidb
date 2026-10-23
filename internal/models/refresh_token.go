@@ -97,9 +97,8 @@ func RevokeTokenFamily(tx *storage.Connection, token *RefreshToken) error {
 			select r.id, r.user_id, r.token, r.revoked, r.parent from `+tablename+` r inner join token_family t on t.token = r.parent
 		)
 		update `+tablename+` r set revoked = true from token_family where token_family.id = r.id;`, token.Token).Exec()
-	}
 	if err != nil {
-		if errors.Cause(err) == sql.ErrNoRows || errors.Is(err, sql.ErrNoRows) {
+		if IsNoRowsError(err) {
 			return nil
 		}
 
@@ -112,7 +111,7 @@ func FindTokenBySessionID(tx *storage.Connection, sessionId *uuid.UUID) (*Refres
 	refreshToken := &RefreshToken{}
 	err := tx.Q().Where("instance_id = ? and session_id = ? and revoked = false", uuid.Nil, sessionId).Order("created_at asc").First(refreshToken)
 	if err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if IsNoRowsError(err) {
 			return nil, RefreshTokenNotFoundError{}
 		}
 		return nil, err
